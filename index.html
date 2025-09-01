@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Email Template BuilderH</title>
+    <title>Email Template Builder</title>
     <style>
+        /* Your CSS remains unchanged */
         * {
             box-sizing: border-box;
             margin: 0;
@@ -623,10 +624,10 @@
                 
                 switch(type) {
                     case 'header':
-                        const img = component.querySelector('img');
+                        const headerImg = component.querySelector('img');
                         currentValues = {
-                            logoUrl: img.src,
-                            altText: img.alt
+                            logoUrl: headerImg.src,
+                            altText: headerImg.alt
                         };
                         break;
                     case 'hero':
@@ -827,10 +828,10 @@
                 switch(type) {
                     case 'header':
                         const logoUrl = document.getElementById('header-logo').value;
-                        const altText = document.getElementById('header-alt').value;
-                        const img = component.querySelector('img');
-                        img.src = logoUrl;
-                        img.alt = altText;
+                        const headerAltText = document.getElementById('header-alt').value;
+                        const headerImg = component.querySelector('img');
+                        headerImg.src = logoUrl;
+                        headerImg.alt = headerAltText;
                         break;
                     case 'hero':
                         const title = document.getElementById('hero-title').value;
@@ -856,12 +857,12 @@
                         break;
                     case 'image':
                         const imageUrl = document.getElementById('image-src').value;
-                        const altText = document.getElementById('image-alt').value;
+                        const imageAltText = document.getElementById('image-alt').value;
                         const linkUrl = document.getElementById('image-link').value;
                         
                         const image = component.querySelector('img');
                         image.src = imageUrl;
-                        image.alt = altText;
+                        image.alt = imageAltText;
                         
                         // Add link if provided
                         if (linkUrl) {
