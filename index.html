@@ -257,6 +257,35 @@
             margin-bottom: 1rem;
             color: #444;
         }
+        
+        .code-container {
+            background-color: #f5f7f9;
+            border: 1px solid #e1e4e8;
+            border-radius: 4px;
+            padding: 1rem;
+            margin-top: 1rem;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        pre {
+            white-space: pre-wrap;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+        }
+        
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: #333;
+            color: white;
+            padding: 1rem;
+            border-radius: 4px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+            display: none;
+            z-index: 1001;
+        }
     </style>
 </head>
 <body>
@@ -336,8 +365,13 @@
                 <div class="export-option" id="export-html">Export as HTML</div>
                 <div class="export-option" id="export-copy">Copy to Clipboard</div>
             </div>
+            <div class="code-container" id="export-code-container" style="display: none;">
+                <pre id="export-code"></pre>
+            </div>
         </div>
     </div>
+
+    <div class="toast" id="toast">Copied to clipboard!</div>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
@@ -349,6 +383,9 @@
             const previewModal = document.getElementById('preview-modal');
             const exportModal = document.getElementById('export-modal');
             const previewContent = document.getElementById('preview-content');
+            const exportCodeContainer = document.getElementById('export-code-container');
+            const exportCode = document.getElementById('export-code');
+            const toast = document.getElementById('toast');
             
             // Remove the placeholder when components are added
             function checkPlaceholder() {
@@ -568,6 +605,70 @@
             function showPropertiesPanel(type, component) {
                 let html = '';
                 
+                // Get current values from the component
+                let currentValues = {};
+                
+                switch(type) {
+                    case 'header':
+                        const img = component.querySelector('img');
+                        currentValues = {
+                            logoUrl: img.src,
+                            altText: img.alt
+                        };
+                        break;
+                    case 'hero':
+                        const title = component.querySelector('h1');
+                        const text = component.querySelector('p');
+                        const button = component.querySelector('a');
+                        const bgColor = component.querySelector('table').bgColor;
+                        currentValues = {
+                            title: title.textContent,
+                            text: text.textContent,
+                            buttonText: button.textContent,
+                            buttonLink: button.href,
+                            bgColor: bgColor
+                        };
+                        break;
+                    case 'text':
+                        const heading = component.querySelector('h2');
+                        const content = component.querySelector('p');
+                        const align = component.querySelector('td').align;
+                        currentValues = {
+                            heading: heading.textContent,
+                            content: content.textContent,
+                            align: align
+                        };
+                        break;
+                    case 'image':
+                        const image = component.querySelector('img');
+                        const link = component.querySelector('a');
+                        currentValues = {
+                            imageUrl: image.src,
+                            altText: image.alt,
+                            linkUrl: link ? link.href : ''
+                        };
+                        break;
+                    case 'button':
+                        const btn = component.querySelector('a');
+                        const btnColor = btn.style.backgroundColor;
+                        const textColor = btn.style.color;
+                        currentValues = {
+                            buttonText: btn.textContent,
+                            buttonLink: btn.href,
+                            buttonColor: btnColor,
+                            textColor: textColor
+                        };
+                        break;
+                    case 'footer':
+                        const copyright = component.querySelector('p:last-child');
+                        const bg = component.querySelector('table').bgColor;
+                        currentValues = {
+                            copyright: copyright.innerHTML,
+                            bgColor: bg
+                        };
+                        break;
+                }
+                
                 switch(type) {
                     case 'header':
                         html = `
@@ -575,12 +676,13 @@
                                 <h3>Header Settings</h3>
                                 <div class="form-group">
                                     <label for="header-logo">Logo URL</label>
-                                    <input type="text" id="header-logo" value="https://via.placeholder.com/150x50">
+                                    <input type="text" id="header-logo" value="${currentValues.logoUrl}">
                                 </div>
                                 <div class="form-group">
                                     <label for="header-alt">Alt Text</label>
-                                    <input type="text" id="header-alt" value="Company Logo">
+                                    <input type="text" id="header-alt" value="${currentValues.altText}">
                                 </div>
+                                <button class="btn btn-primary" id="header-save">Apply Changes</button>
                             </div>
                         `;
                         break;
@@ -590,24 +692,25 @@
                                 <h3>Hero Section Settings</h3>
                                 <div class="form-group">
                                     <label for="hero-title">Title</label>
-                                    <input type="text" id="hero-title" value="Welcome to our newsletter">
+                                    <input type="text" id="hero-title" value="${currentValues.title}">
                                 </div>
                                 <div class="form-group">
                                     <label for="hero-text">Text</label>
-                                    <textarea id="hero-text">Discover our latest products and offers</textarea>
+                                    <textarea id="hero-text">${currentValues.text}</textarea>
                                 </div>
                                 <div class="form-group">
                                     <label for="hero-button">Button Text</label>
-                                    <input type="text" id="hero-button" value="Shop Now">
+                                    <input type="text" id="hero-button" value="${currentValues.buttonText}">
                                 </div>
                                 <div class="form-group">
                                     <label for="hero-link">Button Link</label>
-                                    <input type="text" id="hero-link" value="#">
+                                    <input type="text" id="hero-link" value="${currentValues.buttonLink}">
                                 </div>
                                 <div class="form-group">
                                     <label for="hero-bg">Background Color</label>
-                                    <input type="color" id="hero-bg" value="#6e8efb">
+                                    <input type="color" id="hero-bg" value="${currentValues.bgColor}">
                                 </div>
+                                <button class="btn btn-primary" id="hero-save">Apply Changes</button>
                             </div>
                         `;
                         break;
@@ -617,20 +720,21 @@
                                 <h3>Text Settings</h3>
                                 <div class="form-group">
                                     <label for="text-heading">Heading</label>
-                                    <input type="text" id="text-heading" value="Your heading here">
+                                    <input type="text" id="text-heading" value="${currentValues.heading}">
                                 </div>
                                 <div class="form-group">
                                     <label for="text-content">Content</label>
-                                    <textarea id="text-content" rows="5">Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</textarea>
+                                    <textarea id="text-content" rows="5">${currentValues.content}</textarea>
                                 </div>
                                 <div class="form-group">
                                     <label for="text-align">Alignment</label>
                                     <select id="text-align">
-                                        <option value="left">Left</option>
-                                        <option value="center">Center</option>
-                                        <option value="right">Right</option>
+                                        <option value="left" ${currentValues.align === 'left' ? 'selected' : ''}>Left</option>
+                                        <option value="center" ${currentValues.align === 'center' ? 'selected' : ''}>Center</option>
+                                        <option value="right" ${currentValues.align === 'right' ? 'selected' : ''}>Right</option>
                                     </select>
                                 </div>
+                                <button class="btn btn-primary" id="text-save">Apply Changes</button>
                             </div>
                         `;
                         break;
@@ -640,16 +744,17 @@
                                 <h3>Image Settings</h3>
                                 <div class="form-group">
                                     <label for="image-src">Image URL</label>
-                                    <input type="text" id="image-src" value="https://via.placeholder.com/600x300">
+                                    <input type="text" id="image-src" value="${currentValues.imageUrl}">
                                 </div>
                                 <div class="form-group">
                                     <label for="image-alt">Alt Text</label>
-                                    <input type="text" id="image-alt" value="Placeholder Image">
+                                    <input type="text" id="image-alt" value="${currentValues.altText}">
                                 </div>
                                 <div class="form-group">
                                     <label for="image-link">Link URL</label>
-                                    <input type="text" id="image-link" value="">
+                                    <input type="text" id="image-link" value="${currentValues.linkUrl}">
                                 </div>
+                                <button class="btn btn-primary" id="image-save">Apply Changes</button>
                             </div>
                         `;
                         break;
@@ -659,20 +764,21 @@
                                 <h3>Button Settings</h3>
                                 <div class="form-group">
                                     <label for="button-text">Button Text</label>
-                                    <input type="text" id="button-text" value="Click Me">
+                                    <input type="text" id="button-text" value="${currentValues.buttonText}">
                                 </div>
                                 <div class="form-group">
                                     <label for="button-link">Button Link</label>
-                                    <input type="text" id="button-link" value="#">
+                                    <input type="text" id="button-link" value="${currentValues.buttonLink}">
                                 </div>
                                 <div class="form-group">
                                     <label for="button-color">Button Color</label>
-                                    <input type="color" id="button-color" value="#6e8efb">
+                                    <input type="color" id="button-color" value="${currentValues.buttonColor || '#6e8efb'}">
                                 </div>
                                 <div class="form-group">
                                     <label for="button-text-color">Text Color</label>
-                                    <input type="color" id="button-text-color" value="#ffffff">
+                                    <input type="color" id="button-text-color" value="${currentValues.textColor || '#ffffff'}">
                                 </div>
+                                <button class="btn btn-primary" id="button-save">Apply Changes</button>
                             </div>
                         `;
                         break;
@@ -682,12 +788,13 @@
                                 <h3>Footer Settings</h3>
                                 <div class="form-group">
                                     <label for="footer-copyright">Copyright Text</label>
-                                    <input type="text" id="footer-copyright" value="&copy; 2023 Company Name. All rights reserved.">
+                                    <input type="text" id="footer-copyright" value="${currentValues.copyright}">
                                 </div>
                                 <div class="form-group">
                                     <label for="footer-bg">Background Color</label>
-                                    <input type="color" id="footer-bg" value="#f5f7f9">
+                                    <input type="color" id="footer-bg" value="${currentValues.bgColor || '#f5f7f9'}">
                                 </div>
+                                <button class="btn btn-primary" id="footer-save">Apply Changes</button>
                             </div>
                         `;
                         break;
@@ -695,20 +802,155 @@
                 
                 propertyEditor.innerHTML = html;
                 
-                // Add event listeners to property inputs
-                const inputs = propertyEditor.querySelectorAll('input, textarea, select');
-                inputs.forEach(input => {
-                    input.addEventListener('change', function() {
-                        updateComponent(component, type);
-                    });
+                // Add event listeners to the save button
+                const saveButton = propertyEditor.querySelector('button');
+                saveButton.addEventListener('click', function() {
+                    updateComponent(component, type);
                 });
             }
             
             // Update component based on property changes
             function updateComponent(component, type) {
-                // This would update the component based on the property values
-                // For simplicity, we're just logging the changes
-                console.log(`Updating ${type} component with new properties`);
+                switch(type) {
+                    case 'header':
+                        const logoUrl = document.getElementById('header-logo').value;
+                        const altText = document.getElementById('header-alt').value;
+                        const img = component.querySelector('img');
+                        img.src = logoUrl;
+                        img.alt = altText;
+                        break;
+                    case 'hero':
+                        const title = document.getElementById('hero-title').value;
+                        const text = document.getElementById('hero-text').value;
+                        const buttonText = document.getElementById('hero-button').value;
+                        const buttonLink = document.getElementById('hero-link').value;
+                        const bgColor = document.getElementById('hero-bg').value;
+                        
+                        component.querySelector('h1').textContent = title;
+                        component.querySelector('p').textContent = text;
+                        component.querySelector('a').textContent = buttonText;
+                        component.querySelector('a').href = buttonLink;
+                        component.querySelector('table').bgColor = bgColor;
+                        break;
+                    case 'text':
+                        const heading = document.getElementById('text-heading').value;
+                        const content = document.getElementById('text-content').value;
+                        const align = document.getElementById('text-align').value;
+                        
+                        component.querySelector('h2').textContent = heading;
+                        component.querySelector('p').textContent = content;
+                        component.querySelector('td').align = align;
+                        break;
+                    case 'image':
+                        const imageUrl = document.getElementById('image-src').value;
+                        const altText = document.getElementById('image-alt').value;
+                        const linkUrl = document.getElementById('image-link').value;
+                        
+                        const image = component.querySelector('img');
+                        image.src = imageUrl;
+                        image.alt = altText;
+                        
+                        // Add link if provided
+                        if (linkUrl) {
+                            const link = document.createElement('a');
+                            link.href = linkUrl;
+                            image.parentNode.innerHTML = '';
+                            link.appendChild(image);
+                            image.parentNode.parentNode.appendChild(link);
+                        }
+                        break;
+                    case 'button':
+                        const btnText = document.getElementById('button-text').value;
+                        const btnLink = document.getElementById('button-link').value;
+                        const btnColor = document.getElementById('button-color').value;
+                        const btnTextColor = document.getElementById('button-text-color').value;
+                        
+                        const button = component.querySelector('a');
+                        button.textContent = btnText;
+                        button.href = btnLink;
+                        button.style.backgroundColor = btnColor;
+                        button.style.color = btnTextColor;
+                        break;
+                    case 'footer':
+                        const copyright = document.getElementById('footer-copyright').value;
+                        const footerBg = document.getElementById('footer-bg').value;
+                        
+                        component.querySelector('p:last-child').innerHTML = copyright;
+                        component.querySelector('table').bgColor = footerBg;
+                        break;
+                }
+                
+                showToast('Changes applied successfully!');
+            }
+            
+            // Generate HTML code for export
+            function generateHTML() {
+                const components = canvas.querySelectorAll('.email-component');
+                let html = `<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Template</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+        }
+        .email-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+        }
+        img {
+            max-width: 100%;
+            height: auto;
+        }
+        a {
+            text-decoration: none;
+        }
+        @media screen and (max-width: 600px) {
+            .email-container {
+                width: 100% !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">`;
+                
+                components.forEach(component => {
+                    // Clone to avoid modifying the original
+                    const clone = component.cloneNode(true);
+                    
+                    // Remove edit tools
+                    const tools = clone.querySelector('.component-tools');
+                    if (tools) tools.remove();
+                    
+                    // Remove outline
+                    clone.style.outline = 'none';
+                    
+                    html += clone.outerHTML;
+                });
+                
+                html += `</div>
+</body>
+</html>`;
+                
+                return html;
+            }
+            
+            // Show toast notification
+            function showToast(message) {
+                toast.textContent = message;
+                toast.style.display = 'block';
+                
+                setTimeout(() => {
+                    toast.style.display = 'none';
+                }, 3000);
             }
             
             // Initialize modals
@@ -716,17 +958,23 @@
                 const previewBtn = document.getElementById('preview-btn');
                 const exportBtn = document.getElementById('export-btn');
                 const closeModalButtons = document.querySelectorAll('.close-modal');
+                const exportHtmlBtn = document.getElementById('export-html');
+                const exportCopyBtn = document.getElementById('export-copy');
                 
                 previewBtn.addEventListener('click', function() {
                     previewContent.innerHTML = canvas.innerHTML;
                     // Remove edit/delete buttons for preview
                     const tools = previewContent.querySelectorAll('.component-tools');
                     tools.forEach(tool => tool.remove());
+                    // Remove outlines
+                    const components = previewContent.querySelectorAll('.email-component');
+                    components.forEach(comp => comp.style.outline = 'none');
                     previewModal.style.display = 'flex';
                 });
                 
                 exportBtn.addEventListener('click', function() {
                     exportModal.style.display = 'flex';
+                    exportCodeContainer.style.display = 'none';
                 });
                 
                 closeModalButtons.forEach(button => {
@@ -747,12 +995,21 @@
                 });
                 
                 // Export options
-                document.getElementById('export-html').addEventListener('click', function() {
-                    alert('HTML export functionality would be implemented here');
+                exportHtmlBtn.addEventListener('click', function() {
+                    const htmlCode = generateHTML();
+                    exportCode.textContent = htmlCode;
+                    exportCodeContainer.style.display = 'block';
                 });
                 
-                document.getElementById('export-copy').addEventListener('click', function() {
-                    alert('Copy to clipboard functionality would be implemented here');
+                exportCopyBtn.addEventListener('click', function() {
+                    const htmlCode = generateHTML();
+                    navigator.clipboard.writeText(htmlCode).then(() => {
+                        showToast('HTML copied to clipboard!');
+                        exportModal.style.display = 'none';
+                    }).catch(err => {
+                        console.error('Failed to copy: ', err);
+                        showToast('Failed to copy to clipboard');
+                    });
                 });
             }
             
