@@ -276,7 +276,7 @@
             background-color: white;
             border-radius: 8px;
             width: 90%;
-            max-width: 800px;
+            max-width: 500px;
             max-height: 90vh;
             overflow: hidden;
             display: flex;
@@ -293,6 +293,7 @@
         
         .modal-header h2 {
             margin: 0;
+            font-size: 1.5rem;
         }
         
         .close-modal {
@@ -424,6 +425,10 @@
                 flex-wrap: wrap;
                 gap: 8px;
                 justify-content: flex-end;
+            }
+            
+            .modal-content {
+                width: 95%;
             }
         }
     </style>
@@ -612,14 +617,6 @@
                         <label for="send-from-name">From Name</label>
                         <input type="text" id="send-from-name" placeholder="Your Name">
                     </div>
-                    <div class="form-group">
-                        <label for="send-from-email">From Email</label>
-                        <input type="email" id="send-from-email" placeholder="your-email@example.com">
-                    </div>
-                    <div class="form-group">
-                        <label for="send-reply-to">Reply To (optional)</label>
-                        <input type="email" id="send-reply-to" placeholder="reply-to@example.com">
-                    </div>
                 </div>
                 <div id="send-status" style="margin-top: 15px; padding: 10px; display: none;"></div>
             </div>
@@ -636,7 +633,7 @@
     <script>
         // Initialize EmailJS with your public key
         // Replace 'YOUR_PUBLIC_KEY' with your actual EmailJS public key
-        emailjs.init("YOUR_PUBLIC_KEY");
+        emailjs.init("FNNCmBtDRxLL0AE5S");
         
         // DOM Elements
         const emailCanvas = document.getElementById('email-canvas');
@@ -671,8 +668,6 @@
         const sendToInput = document.getElementById('send-to');
         const sendSubjectInput = document.getElementById('send-subject');
         const sendFromNameInput = document.getElementById('send-from-name');
-        const sendFromEmailInput = document.getElementById('send-from-email');
-        const sendReplyToInput = document.getElementById('send-reply-to');
         
         // Close modal buttons
         const closeModalButtons = document.querySelectorAll('.close-modal');
@@ -736,7 +731,6 @@
                 // Pre-fill send form with saved variables
                 sendToInput.value = variables.recipientEmail || '';
                 sendFromNameInput.value = variables.senderName || '';
-                sendFromEmailInput.value = variables.senderEmail || '';
             }
         }
         
@@ -1235,10 +1229,6 @@
                 sendFromNameInput.value = variables.senderName;
             }
             
-            if (variables.senderEmail) {
-                sendFromEmailInput.value = variables.senderEmail;
-            }
-            
             // Clear status message
             sendStatus.style.display = 'none';
             sendStatus.innerHTML = '';
@@ -1279,27 +1269,15 @@
             const toEmail = sendToInput.value.trim();
             const subject = sendSubjectInput.value.trim();
             const fromName = sendFromNameInput.value.trim();
-            const fromEmail = sendFromEmailInput.value.trim();
-            const replyTo = sendReplyToInput.value.trim() || fromEmail;
             
             // Validate inputs
-            if (!toEmail || !subject || !fromName || !fromEmail) {
+            if (!toEmail || !subject || !fromName) {
                 showStatus('Please fill in all required fields', 'error');
                 return;
             }
             
             if (!isValidEmail(toEmail)) {
                 showStatus('Please enter a valid recipient email', 'error');
-                return;
-            }
-            
-            if (!isValidEmail(fromEmail)) {
-                showStatus('Please enter a valid sender email', 'error');
-                return;
-            }
-            
-            if (replyTo && !isValidEmail(replyTo)) {
-                showStatus('Please enter a valid reply-to email', 'error');
                 return;
             }
             
@@ -1319,14 +1297,12 @@
                 to_email: toEmail,
                 subject: subject,
                 from_name: fromName,
-                from_email: fromEmail,
-                reply_to: replyTo,
                 message: emailHtml
             };
             
             // Send email using EmailJS
-            // Note: You need to set up your EmailJS account and replace 'YOUR_SERVICE_ID' and 'YOUR_TEMPLATE_ID'
-            emailjs.send('YOUR_SERVICE_ID', 'YOUR_TEMPLATE_ID', templateParams)
+            // We use the "send" method instead of "sendForm" to send our custom HTML content
+            emailjs.send('service_uz15s3l', 'template_q38w4mi', templateParams)
                 .then(() => {
                     showStatus('Email sent successfully!', 'success');
                     
