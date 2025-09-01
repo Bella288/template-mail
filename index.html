@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Template Builder</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: #f5f7f9;
+            color: #333;
+            line-height: 1.6;
+        }
+        
+        .container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+        
+        header {
+            background: linear-gradient(135deg, #6e8efb, #a777e3);
+            color: white;
+            padding: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+        
+        .main-content {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+        
+        .components-panel {
+            width: 250px;
+            background-color: #fff;
+            padding: 1rem;
+            border-right: 1px solid #e1e4e8;
+            overflow-y: auto;
+        }
+        
+        .canvas-container {
+            flex: 1;
+            padding: 1rem;
+            overflow-y: auto;
+            background-color: #f5f7f9;
+        }
+        
+        .properties-panel {
+            width: 300px;
+            background-color: #fff;
+            padding: 1rem;
+            border-left: 1px solid #e1e4e8;
+            overflow-y: auto;
+        }
+        
+        .component-item {
+            background-color: #f5f7f9;
+            border: 1px solid #e1e4e8;
+            border-radius: 4px;
+            padding: 0.75rem;
+            margin-bottom: 0.75rem;
+            cursor: move;
+            transition: all 0.2s ease;
+        }
+        
+        .component-item:hover {
+            background-color: #e6f7ff;
+            border-color: #91d5ff;
+        }
+        
+        .email-canvas {
+            background-color: white;
+            border: 1px dashed #ccc;
+            min-height: 600px;
+            padding: 1rem;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        }
+        
+        .canvas-placeholder {
+            text-align: center;
+            color: #999;
+            padding: 3rem;
+        }
+        
+        .email-component {
+            border: 1px solid #e1e4e8;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            background-color: white;
+            position: relative;
+        }
+        
+        .component-tools {
+            position: absolute;
+            top: 0;
+            right: 0;
+            background-color: #f5f7f9;
+            padding: 0.25rem;
+            border-left: 1px solid #e1e4e8;
+            border-bottom: 1px solid #e1e4e8;
+            display: flex;
+        }
+        
+        .component-tools button {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0.25rem;
+            margin-left: 0.25rem;
+            font-size: 0.75rem;
+        }
+        
+        .btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+        
+        .btn-primary {
+            background-color: #6e8efb;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background-color: #5a7dfa;
+        }
+        
+        .btn-outline {
+            background-color: transparent;
+            border: 1px solid #6e8efb;
+            color: #6e8efb;
+        }
+        
+        .btn-outline:hover {
+            background-color: #f0f5ff;
+        }
+        
+        .property-group {
+            margin-bottom: 1.5rem;
+        }
+        
+        .property-group h3 {
+            font-size: 1rem;
+            margin-bottom: 0.75rem;
+            color: #555;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 0.5rem;
+        }
+        
+        .form-group {
+            margin-bottom: 0.75rem;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 0.25rem;
+            font-size: 0.85rem;
+            color: #666;
+        }
+        
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 0.5rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+        
+        .header-buttons {
+            display: flex;
+            gap: 0.5rem;
+        }
+        
+        .drag-over {
+            background-color: #e6f7ff;
+            border: 2px dashed #1890ff;
+        }
+        
+        .preview-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .modal-content {
+            background-color: white;
+            padding: 2rem;
+            border-radius: 8px;
+            width: 80%;
+            max-width: 800px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+        
+        .close-modal {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+        
+        .export-options {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        
+        .export-option {
+            padding: 1rem;
+            border: 1px solid #e1e4e8;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .export-option:hover {
+            background-color: #f0f5ff;
+            border-color: #6e8efb;
+        }
+        
+        h2 {
+            font-size: 1.25rem;
+            margin-bottom: 1rem;
+            color: #444;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">Email Template Builder</div>
+            <div class="header-buttons">
+                <button class="btn btn-outline" id="preview-btn">Preview</button>
+                <button class="btn btn-primary" id="export-btn">Export</button>
+            </div>
+        </header>
+        
+        <div class="main-content">
+            <div class="components-panel">
+                <h2>Components</h2>
+                <div class="component-item" draggable="true" data-type="header">
+                    <strong>Header</strong>
+                    <p>Email header with logo and navigation</p>
+                </div>
+                <div class="component-item" draggable="true" data-type="hero">
+                    <strong>Hero Section</strong>
+                    <p>Large banner with call-to-action</p>
+                </div>
+                <div class="component-item" draggable="true" data-type="text">
+                    <strong>Text Block</strong>
+                    <p>Simple text content</p>
+                </div>
+                <div class="component-item" draggable="true" data-type="image">
+                    <strong>Image</strong>
+                    <p>Single image with optional link</p>
+                </div>
+                <div class="component-item" draggable="true" data-type="button">
+                    <strong>Button</strong>
+                    <p>Call-to-action button</p>
+                </div>
+                <div class="component-item" draggable="true" data-type="footer">
+                    <strong>Footer</strong>
+                    <p>Email footer with links and copyright</p>
+                </div>
+            </div>
+            
+            <div class="canvas-container">
+                <h2>Canvas</h2>
+                <div class="email-canvas" id="email-canvas">
+                    <div class="canvas-placeholder">
+                        <p>Drag components from the left panel to build your email template</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="properties-panel">
+                <h2>Properties</h2>
+                <div id="property-editor">
+                    <p>Select a component to edit its properties</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="preview-modal" id="preview-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Email Preview</h2>
+                <button class="close-modal">&times;</button>
+            </div>
+            <div id="preview-content"></div>
+        </div>
+    </div>
+    
+    <div class="preview-modal" id="export-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Export Template</h2>
+                <button class="close-modal">&times;</button>
+            </div>
+            <div class="export-options">
+                <div class="export-option" id="export-html">Export as HTML</div>
+                <div class="export-option" id="export-copy">Copy to Clipboard</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Variables to track state
+            let draggedItem = null;
+            let currentSelectedComponent = null;
+            const canvas = document.getElementById('email-canvas');
+            const propertyEditor = document.getElementById('property-editor');
+            const previewModal = document.getElementById('preview-modal');
+            const exportModal = document.getElementById('export-modal');
+            const previewContent = document.getElementById('preview-content');
+            
+            // Remove the placeholder when components are added
+            function checkPlaceholder() {
+                const placeholder = canvas.querySelector('.canvas-placeholder');
+                if (canvas.children.length > 1 && placeholder) {
+                    canvas.removeChild(placeholder);
+                } else if (canvas.children.length === 0) {
+                    canvas.innerHTML = '<div class="canvas-placeholder"><p>Drag components from the left panel to build your email template</p></div>';
+                }
+            }
+            
+            // Initialize drag and drop functionality
+            function initDragAndDrop() {
+                const components = document.querySelectorAll('.component-item');
+                
+                components.forEach(component => {
+                    component.addEventListener('dragstart', function(e) {
+                        draggedItem = e.target;
+                        e.dataTransfer.setData('text/plain', e.target.getAttribute('data-type'));
+                        setTimeout(() => {
+                            e.target.style.opacity = '0.5';
+                        }, 0);
+                    });
+                    
+                    component.addEventListener('dragend', function(e) {
+                        e.target.style.opacity = '1';
+                    });
+                });
+                
+                canvas.addEventListener('dragover', function(e) {
+                    e.preventDefault();
+                    canvas.classList.add('drag-over');
+                });
+                
+                canvas.addEventListener('dragleave', function() {
+                    canvas.classList.remove('drag-over');
+                });
+                
+                canvas.addEventListener('drop', function(e) {
+                    e.preventDefault();
+                    canvas.classList.remove('drag-over');
+                    
+                    const componentType = e.dataTransfer.getData('text/plain');
+                    addComponentToCanvas(componentType);
+                });
+            }
+            
+            // Add a component to the canvas
+            function addComponentToCanvas(type) {
+                const id = 'component-' + Date.now();
+                let html = '';
+                
+                switch(type) {
+                    case 'header':
+                        html = `
+                            <div class="email-component" data-type="header" id="${id}">
+                                <div class="component-tools">
+                                    <button class="edit-btn">Edit</button>
+                                    <button class="delete-btn">Delete</button>
+                                </div>
+                                <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                                    <tr>
+                                        <td align="center" style="padding: 20px 0;">
+                                            <img src="https://via.placeholder.com/150x50" alt="Company Logo" style="max-width: 150px;">
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                        `;
+                        break;
+                    case 'hero':
+                        html = `
+                            <div class="email-component" data-type="hero" id="${id}">
+                                <div class="component-tools">
+                                    <button class="edit-btn">Edit</button>
+                                    <button class="delete-btn">Delete</button>
+                                </div>
+                                <table width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#6e8efb">
+                                    <tr>
+                                        <td align="center" style="padding: 40px 20px; color: white;">
+                                            <h1 style="margin: 0 0 20px 0;">Welcome to our newsletter</h1>
+                                            <p style="margin: 0 0 30px 0; font-size: 16px;">Discover our latest products and offers</p>
+                                            <a href="#" style="display: inline-block; padding: 12px 30px; background-color: white; color: #6e8efb; text-decoration: none; border-radius: 4px; font-weight: bold;">Shop Now</a>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                        `;
+                        break;
+                    case 'text':
+                        html = `
+                            <div class="email-component" data-type="text" id="${id}">
+                                <div class="component-tools">
+                                    <button class="edit-btn">Edit</button>
+                                    <button class="delete-btn">Delete</button>
+                                </div>
+                                <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                                    <tr>
+                                        <td align="left" style="padding: 20px;">
+                                            <h2>Your heading here</h2>
+                                            <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                        `;
+                        break;
+                    case 'image':
+                        html = `
+                            <div class="email-component" data-type="image" id="${id}">
+                                <div class="component-tools">
+                                    <button class="edit-btn">Edit</button>
+                                    <button class="delete-btn">Delete</button>
+                                </div>
+                                <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                                    <tr>
+                                        <td align="center" style="padding: 20px;">
+                                            <img src="https://via.placeholder.com/600x300" alt="Placeholder Image" style="max-width: 100%;">
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                        `;
+                        break;
+                    case 'button':
+                        html = `
+                            <div class="email-component" data-type="button" id="${id}">
+                                <div class="component-tools">
+                                    <button class="edit-btn">Edit</button>
+                                    <button class="delete-btn">Delete</button>
+                                </div>
+                                <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                                    <tr>
+                                        <td align="center" style="padding: 20px;">
+                                            <a href="#" style="display: inline-block; padding: 12px 30px; background-color: #6e8efb; color: white; text-decoration: none; border-radius: 4px; font-weight: bold;">Click Me</a>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                        `;
+                        break;
+                    case 'footer':
+                        html = `
+                            <div class="email-component" data-type="footer" id="${id}">
+                                <div class="component-tools">
+                                    <button class="edit-btn">Edit</button>
+                                    <button class="delete-btn">Delete</button>
+                                </div>
+                                <table width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f5f7f9">
+                                    <tr>
+                                        <td align="center" style="padding: 30px 20px;">
+                                            <p style="margin: 0 0 15px 0; color: #666; font-size: 14px;">
+                                                <a href="#" style="color: #6e8efb; text-decoration: none; margin: 0 10px;">Unsubscribe</a>
+                                                <a href="#" style="color: #6e8efb; text-decoration: none; margin: 0 10px;">Privacy Policy</a>
+                                                <a href="#" style="color: #6e8efb; text-decoration: none; margin: 0 10px;">Contact Us</a>
+                                            </p>
+                                            <p style="margin: 0; color: #999; font-size: 12px;">&copy; 2023 Company Name. All rights reserved.</p>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                        `;
+                        break;
+                }
+                
+                // Remove placeholder if it exists
+                checkPlaceholder();
+                
+                // Add the component to the canvas
+                canvas.insertAdjacentHTML('beforeend', html);
+                
+                // Add event listeners to the new component
+                const newComponent = document.getElementById(id);
+                initComponentEvents(newComponent);
+            }
+            
+            // Initialize component events (edit, delete, select)
+            function initComponentEvents(component) {
+                const deleteBtn = component.querySelector('.delete-btn');
+                const editBtn = component.querySelector('.edit-btn');
+                
+                deleteBtn.addEventListener('click', function() {
+                    component.remove();
+                    checkPlaceholder();
+                    propertyEditor.innerHTML = '<p>Select a component to edit its properties</p>';
+                    currentSelectedComponent = null;
+                });
+                
+                editBtn.addEventListener('click', function() {
+                    selectComponent(component);
+                });
+                
+                component.addEventListener('click', function(e) {
+                    if (e.target !== deleteBtn && e.target !== editBtn) {
+                        selectComponent(component);
+                    }
+                });
+            }
+            
+            // Select a component and show its properties
+            function selectComponent(component) {
+                // Remove previous selection
+                if (currentSelectedComponent) {
+                    currentSelectedComponent.style.outline = 'none';
+                }
+                
+                // Set new selection
+                currentSelectedComponent = component;
+                component.style.outline = '2px solid #6e8efb';
+                
+                // Show properties in the properties panel
+                const type = component.getAttribute('data-type');
+                showPropertiesPanel(type, component);
+            }
+            
+            // Show the properties panel for the selected component
+            function showPropertiesPanel(type, component) {
+                let html = '';
+                
+                switch(type) {
+                    case 'header':
+                        html = `
+                            <div class="property-group">
+                                <h3>Header Settings</h3>
+                                <div class="form-group">
+                                    <label for="header-logo">Logo URL</label>
+                                    <input type="text" id="header-logo" value="https://via.placeholder.com/150x50">
+                                </div>
+                                <div class="form-group">
+                                    <label for="header-alt">Alt Text</label>
+                                    <input type="text" id="header-alt" value="Company Logo">
+                                </div>
+                            </div>
+                        `;
+                        break;
+                    case 'hero':
+                        html = `
+                            <div class="property-group">
+                                <h3>Hero Section Settings</h3>
+                                <div class="form-group">
+                                    <label for="hero-title">Title</label>
+                                    <input type="text" id="hero-title" value="Welcome to our newsletter">
+                                </div>
+                                <div class="form-group">
+                                    <label for="hero-text">Text</label>
+                                    <textarea id="hero-text">Discover our latest products and offers</textarea>
+                                </div>
+                                <div class="form-group">
+                                    <label for="hero-button">Button Text</label>
+                                    <input type="text" id="hero-button" value="Shop Now">
+                                </div>
+                                <div class="form-group">
+                                    <label for="hero-link">Button Link</label>
+                                    <input type="text" id="hero-link" value="#">
+                                </div>
+                                <div class="form-group">
+                                    <label for="hero-bg">Background Color</label>
+                                    <input type="color" id="hero-bg" value="#6e8efb">
+                                </div>
+                            </div>
+                        `;
+                        break;
+                    case 'text':
+                        html = `
+                            <div class="property-group">
+                                <h3>Text Settings</h3>
+                                <div class="form-group">
+                                    <label for="text-heading">Heading</label>
+                                    <input type="text" id="text-heading" value="Your heading here">
+                                </div>
+                                <div class="form-group">
+                                    <label for="text-content">Content</label>
+                                    <textarea id="text-content" rows="5">Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</textarea>
+                                </div>
+                                <div class="form-group">
+                                    <label for="text-align">Alignment</label>
+                                    <select id="text-align">
+                                        <option value="left">Left</option>
+                                        <option value="center">Center</option>
+                                        <option value="right">Right</option>
+                                    </select>
+                                </div>
+                            </div>
+                        `;
+                        break;
+                    case 'image':
+                        html = `
+                            <div class="property-group">
+                                <h3>Image Settings</h3>
+                                <div class="form-group">
+                                    <label for="image-src">Image URL</label>
+                                    <input type="text" id="image-src" value="https://via.placeholder.com/600x300">
+                                </div>
+                                <div class="form-group">
+                                    <label for="image-alt">Alt Text</label>
+                                    <input type="text" id="image-alt" value="Placeholder Image">
+                                </div>
+                                <div class="form-group">
+                                    <label for="image-link">Link URL</label>
+                                    <input type="text" id="image-link" value="">
+                                </div>
+                            </div>
+                        `;
+                        break;
+                    case 'button':
+                        html = `
+                            <div class="property-group">
+                                <h3>Button Settings</h3>
+                                <div class="form-group">
+                                    <label for="button-text">Button Text</label>
+                                    <input type="text" id="button-text" value="Click Me">
+                                </div>
+                                <div class="form-group">
+                                    <label for="button-link">Button Link</label>
+                                    <input type="text" id="button-link" value="#">
+                                </div>
+                                <div class="form-group">
+                                    <label for="button-color">Button Color</label>
+                                    <input type="color" id="button-color" value="#6e8efb">
+                                </div>
+                                <div class="form-group">
+                                    <label for="button-text-color">Text Color</label>
+                                    <input type="color" id="button-text-color" value="#ffffff">
+                                </div>
+                            </div>
+                        `;
+                        break;
+                    case 'footer':
+                        html = `
+                            <div class="property-group">
+                                <h3>Footer Settings</h3>
+                                <div class="form-group">
+                                    <label for="footer-copyright">Copyright Text</label>
+                                    <input type="text" id="footer-copyright" value="&copy; 2023 Company Name. All rights reserved.">
+                                </div>
+                                <div class="form-group">
+                                    <label for="footer-bg">Background Color</label>
+                                    <input type="color" id="footer-bg" value="#f5f7f9">
+                                </div>
+                            </div>
+                        `;
+                        break;
+                }
+                
+                propertyEditor.innerHTML = html;
+                
+                // Add event listeners to property inputs
+                const inputs = propertyEditor.querySelectorAll('input, textarea, select');
+                inputs.forEach(input => {
+                    input.addEventListener('change', function() {
+                        updateComponent(component, type);
+                    });
+                });
+            }
+            
+            // Update component based on property changes
+            function updateComponent(component, type) {
+                // This would update the component based on the property values
+                // For simplicity, we're just logging the changes
+                console.log(`Updating ${type} component with new properties`);
+            }
+            
+            // Initialize modals
+            function initModals() {
+                const previewBtn = document.getElementById('preview-btn');
+                const exportBtn = document.getElementById('export-btn');
+                const closeModalButtons = document.querySelectorAll('.close-modal');
+                
+                previewBtn.addEventListener('click', function() {
+                    previewContent.innerHTML = canvas.innerHTML;
+                    // Remove edit/delete buttons for preview
+                    const tools = previewContent.querySelectorAll('.component-tools');
+                    tools.forEach(tool => tool.remove());
+                    previewModal.style.display = 'flex';
+                });
+                
+                exportBtn.addEventListener('click', function() {
+                    exportModal.style.display = 'flex';
+                });
+                
+                closeModalButtons.forEach(button => {
+                    button.addEventListener('click', function() {
+                        previewModal.style.display = 'none';
+                        exportModal.style.display = 'none';
+                    });
+                });
+                
+                // Close modal when clicking outside
+                window.addEventListener('click', function(e) {
+                    if (e.target === previewModal) {
+                        previewModal.style.display = 'none';
+                    }
+                    if (e.target === exportModal) {
+                        exportModal.style.display = 'none';
+                    }
+                });
+                
+                // Export options
+                document.getElementById('export-html').addEventListener('click', function() {
+                    alert('HTML export functionality would be implemented here');
+                });
+                
+                document.getElementById('export-copy').addEventListener('click', function() {
+                    alert('Copy to clipboard functionality would be implemented here');
+                });
+            }
+            
+            // Initialize the application
+            function init() {
+                initDragAndDrop();
+                initModals();
+                checkPlaceholder();
+            }
+            
+            // Start the application
+            init();
+        });
+    </script>
+</body>
+</html>
