@@ -300,6 +300,27 @@
             color: #6e8efb;
             border: 1px dashed #91d5ff;
         }
+
+        .variable-palette {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-top: 10px;
+        }
+        
+        .variable-chip {
+            background-color: #e6f7ff;
+            border: 1px solid #91d5ff;
+            border-radius: 4px;
+            padding: 4px 8px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .variable-chip:hover {
+            background-color: #bae7ff;
+        }
     </style>
 </head>
 <body>
@@ -326,7 +347,7 @@
                 </div>
                 <div class="component-item" draggable="true" data-type="text">
                     <strong>Text Block</strong>
-                    <p>Simple text content</p>
+                    <p>Simple text content with variable support</p>
                 </div>
                 <div class="component-item" draggable="true" data-type="image">
                     <strong>Image</strong>
@@ -334,7 +355,7 @@
                 </div>
                 <div class="component-item" draggable="true" data-type="button">
                     <strong>Button</strong>
-                    <p>Call-to-action button</p>
+                    <p>Call-to-action button with variable support</p>
                 </div>
                 <div class="component-item" draggable="true" data-type="footer">
                     <strong>Footer</strong>
@@ -342,25 +363,16 @@
                 </div>
                 
                 <h2 style="margin-top: 20px;">Variables</h2>
-                <div class="component-item" draggable="true" data-type="variable" data-var="{rName}">
-                    <strong>Recipient Name</strong>
-                    <p>{rName} - Will be replaced with actual name</p>
-                </div>
-                <div class="component-item" draggable="true" data-type="variable" data-var="{sName}">
-                    <strong>Sender Name</strong>
-                    <p>{sName} - Will be replaced with sender name</p>
-                </div>
-                <div class="component-item" draggable="true" data-type="variable" data-var="{sEmail}">
-                    <strong>Sender Email</strong>
-                    <p>{sEmail} - Will be replaced with sender email</p>
-                </div>
-                <div class="component-item" draggable="true" data-type="variable" data-var="{rEmail}">
-                    <strong>Recipient Email</strong>
-                    <p>{rEmail} - Will be replaced with recipient email</p>
-                </div>
-                <div class="component-item" draggable="true" data-type="variable" data-var="{sDate}">
-                    <strong>Send Date</strong>
-                    <p>{sDate} - Will be replaced with send date</p>
+                <div class="component-item" data-type="variable-info">
+                    <strong>How to use variables</strong>
+                    <p>Add a text component first, then insert variables from the property editor.</p>
+                    <div class="variable-palette">
+                        <span class="variable-chip" data-var="{rName}">{rName}</span>
+                        <span class="variable-chip" data-var="{sName}">{sName}</span>
+                        <span class="variable-chip" data-var="{sEmail}">{sEmail}</span>
+                        <span class="variable-chip" data-var="{rEmail}">{rEmail}</span>
+                        <span class="variable-chip" data-var="{sDate}">{sDate}</span>
+                    </div>
                 </div>
             </div>
             
@@ -489,6 +501,9 @@
             '{sDate}': 'sendDate'
         };
         
+        // Currently selected component for editing
+        let currentlyEditingComponent = null;
+        
         // Initialize the application
         function init() {
             // Set today's date as default for send date
@@ -553,14 +568,11 @@
         
         // Set up drag and drop functionality
         function setupDragAndDrop() {
-            const componentItems = document.querySelectorAll('.component-item');
+            const componentItems = document.querySelectorAll('.component-item[draggable="true"]');
             
             componentItems.forEach(item => {
                 item.addEventListener('dragstart', (e) => {
-                    e.dataTransfer.setData('text/plain', JSON.stringify({
-                        type: item.dataset.type,
-                        variable: item.dataset.var || null
-                    }));
+                    e.dataTransfer.setData('text/plain', item.dataset.type);
                 });
             });
             
@@ -577,44 +589,9 @@
                 e.preventDefault();
                 emailCanvas.classList.remove('drag-over');
                 
-                const data = JSON.parse(e.dataTransfer.getData('text/plain'));
-                
-                if (data.type === 'variable') {
-                    addVariableToCanvas(data.variable);
-                } else {
-                    addComponentToCanvas(data.type);
-                }
+                const componentType = e.dataTransfer.getData('text/plain');
+                addComponentToCanvas(componentType);
             });
-        }
-        
-        // Add a variable to the canvas
-        function addVariableToCanvas(variable) {
-            // Remove the placeholder if it exists
-            const placeholder = emailCanvas.querySelector('.canvas-placeholder');
-            if (placeholder) {
-                placeholder.remove();
-            }
-            
-            const variableElement = document.createElement('div');
-            variableElement.className = 'email-component';
-            variableElement.innerHTML = `
-                <span class="variable-placeholder">${variable}</span>
-                <div class="component-tools">
-                    <button class="edit-btn">Edit</button>
-                    <button class="delete-btn">Delete</button>
-                </div>
-            `;
-            
-            // Add event listeners for the tools
-            const deleteBtn = variableElement.querySelector('.delete-btn');
-            deleteBtn.addEventListener('click', () => {
-                variableElement.remove();
-                updateComponentsArray();
-                checkEmptyCanvas();
-            });
-            
-            emailCanvas.appendChild(variableElement);
-            updateComponentsArray();
         }
         
         // Add a component to the canvas
@@ -689,6 +666,7 @@
         
         // Show property editor for a component
         function showPropertyEditor(component, type) {
+            currentlyEditingComponent = component;
             let editorHtml = '';
             
             switch (type) {
@@ -700,6 +678,13 @@
                             <div class="form-group">
                                 <label for="text-content">Text</label>
                                 <textarea id="text-content" rows="6">${currentText}</textarea>
+                            </div>
+                            <div class="variable-palette">
+                                <span class="variable-chip" data-var="{rName}">{rName}</span>
+                                <span class="variable-chip" data-var="{sName}">{sName}</span>
+                                <span class="variable-chip" data-var="{sEmail}">{sEmail}</span>
+                                <span class="variable-chip" data-var="{rEmail}">{rEmail}</span>
+                                <span class="variable-chip" data-var="{sDate}">{sDate}</span>
                             </div>
                             <button class="btn btn-primary" id="save-text">Save Changes</button>
                         </div>
@@ -747,11 +732,42 @@
                         </div>
                     `;
                     break;
+                case 'header':
+                case 'hero':
+                case 'footer':
+                    const currentContent = component.querySelector('.component-content').innerHTML;
+                    editorHtml = `
+                        <div class="property-group">
+                            <h3>${type.charAt(0).toUpperCase() + type.slice(1)} Content</h3>
+                            <div class="form-group">
+                                <label for="custom-content">HTML Content</label>
+                                <textarea id="custom-content" rows="6">${currentContent}</textarea>
+                            </div>
+                            <div class="variable-palette">
+                                <span class="variable-chip" data-var="{rName}">{rName}</span>
+                                <span class="variable-chip" data-var="{sName}">{sName}</span>
+                                <span class="variable-chip" data-var="{sEmail}">{sEmail}</span>
+                                <span class="variable-chip" data-var="{rEmail}">{rEmail}</span>
+                                <span class="variable-chip" data-var="{sDate}">{sDate}</span>
+                            </div>
+                            <button class="btn btn-primary" id="save-custom">Save Changes</button>
+                        </div>
+                    `;
+                    break;
                 default:
                     editorHtml = `<p>No properties to edit for this component.</p>`;
             }
             
             propertyEditor.innerHTML = editorHtml;
+            
+            // Add event listeners to variable chips
+            const variableChips = propertyEditor.querySelectorAll('.variable-chip');
+            variableChips.forEach(chip => {
+                chip.addEventListener('click', () => {
+                    const variable = chip.getAttribute('data-var');
+                    insertVariableAtCursor(variable);
+                });
+            });
             
             // Set up save handlers based on component type
             if (type === 'text') {
@@ -788,7 +804,31 @@
                     component.querySelector('.component-content').innerHTML = buttonHtml;
                     updateComponentsArray();
                 });
+            } else if (['header', 'hero', 'footer'].includes(type)) {
+                document.getElementById('save-custom').addEventListener('click', () => {
+                    const newContent = document.getElementById('custom-content').value;
+                    component.querySelector('.component-content').innerHTML = newContent;
+                    updateComponentsArray();
+                });
             }
+        }
+        
+        // Insert variable at cursor position in textarea
+        function insertVariableAtCursor(variable) {
+            const textarea = propertyEditor.querySelector('textarea');
+            if (!textarea) return;
+            
+            const cursorPosition = textarea.selectionStart;
+            const currentValue = textarea.value;
+            
+            // Insert the variable at cursor position
+            textarea.value = currentValue.substring(0, cursorPosition) + 
+                             variable + 
+                             currentValue.substring(cursorPosition);
+            
+            // Set cursor position after the inserted variable
+            textarea.selectionEnd = cursorPosition + variable.length;
+            textarea.focus();
         }
         
         // Update the components array from the DOM
@@ -797,19 +837,10 @@
             const componentElements = emailCanvas.querySelectorAll('.email-component');
             
             componentElements.forEach(element => {
-                if (element.querySelector('.variable-placeholder')) {
-                    // It's a variable
-                    components.push({
-                        type: 'variable',
-                        content: element.querySelector('.variable-placeholder').textContent
-                    });
-                } else {
-                    // It's a regular component
-                    components.push({
-                        type: element.dataset.type,
-                        content: element.querySelector('.component-content').innerHTML
-                    });
-                }
+                components.push({
+                    type: element.dataset.type,
+                    content: element.querySelector('.component-content').innerHTML
+                });
             });
         }
         
@@ -823,6 +854,22 @@
             }
         }
         
+        // Replace variables in content with their actual values
+        function replaceVariables(content) {
+            let processedContent = content;
+            
+            // Replace all variables in the content
+            for (const [variableKey, variableName] of Object.entries(variableMap)) {
+                const variableValue = variables[variableName] || variableKey;
+                processedContent = processedContent.replace(
+                    new RegExp(variableKey.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), 
+                    variableValue
+                );
+            }
+            
+            return processedContent;
+        }
+        
         // Show preview modal
         function showPreview() {
             updateComponentsArray();
@@ -830,14 +877,7 @@
             let previewHtml = '';
             
             components.forEach(component => {
-                if (component.type === 'variable') {
-                    // Replace variable with actual value
-                    const variableKey = variableMap[component.content];
-                    const variableValue = variables[variableKey] || component.content;
-                    previewHtml += `<div class="variable-preview">${variableValue}</div>`;
-                } else {
-                    previewHtml += component.content;
-                }
+                previewHtml += replaceVariables(component.content);
             });
             
             previewContent.innerHTML = previewHtml;
@@ -897,26 +937,13 @@
                             max-width: 600px;
                             margin: 0 auto;
                         }
-                        .variable-placeholder {
-                            background-color: #f0f5ff;
-                            padding: 4px 8px;
-                            border-radius: 4px;
-                            color: #6e8efb;
-                            border: 1px dashed #91d5ff;
-                        }
                     </style>
                 </head>
                 <body>
             `;
             
             components.forEach(component => {
-                if (component.type === 'variable') {
-                    const variableKey = variableMap[component.content];
-                    const variableValue = variables[variableKey] || component.content;
-                    finalHtml += `<span class="variable-placeholder">${variableValue}</span>`;
-                } else {
-                    finalHtml += component.content;
-                }
+                finalHtml += replaceVariables(component.content);
             });
             
             finalHtml += `
@@ -935,13 +962,7 @@
             let finalHtml = '';
             
             components.forEach(component => {
-                if (component.type === 'variable') {
-                    const variableKey = variableMap[component.content];
-                    const variableValue = variables[variableKey] || component.content;
-                    finalHtml += variableValue;
-                } else {
-                    finalHtml += component.content;
-                }
+                finalHtml += replaceVariables(component.content);
             });
             
             navigator.clipboard.writeText(finalHtml).then(() => {
