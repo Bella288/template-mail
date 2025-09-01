@@ -641,7 +641,7 @@
         function setupEventListeners() {
             // Drag and drop for components
             setupDragAndDrop();
-            
+            console.log('Drag and drop initialized in eventListeners! (index.html@ln.644 in setupEventListeners definition)');
             // Modal buttons
             previewBtn.addEventListener('click', showPreview);
             exportBtn.addEventListener('click', showExportModal);
@@ -675,6 +675,7 @@
             
             componentItems.forEach(item => {
                 item.addEventListener('dragstart', (e) => {
+                    console.log('Drag start! (index.html@ln.678)');
                     e.dataTransfer.setData('text/plain', item.dataset.type);
                 });
             });
@@ -694,6 +695,7 @@
                 
                 const componentType = e.dataTransfer.getData('text/plain');
                 addComponentToCanvas(componentType);
+                console.log('Added component! (index.html@ln.698)', componentType);
             });
         }
         
@@ -703,6 +705,7 @@
             const placeholder = emailCanvas.querySelector('.canvas-placeholder');
             if (placeholder) {
                 placeholder.remove();
+                console.log('Placeholder removed! (index.html@ln.707)');
             }
             
             let componentHtml = '';
