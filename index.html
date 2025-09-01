@@ -561,13 +561,13 @@
         const exportCode = document.getElementById('export-code');
         const exportCodeContainer = document.getElementById('export-code-container');
         const toast = document.getElementById('toast');
-        
+        console.log('DOM elements initialized! (index.html@ln.564)');
         // Buttons
         const previewBtn = document.getElementById('preview-btn');
         const exportBtn = document.getElementById('export-btn');
         const variablesBtn = document.getElementById('variables-btn');
         const saveVariablesBtn = document.getElementById('save-variables');
-        
+        console.log('Buttons initialized! (index.html@ln.570)');
         // Variable Inputs
         const senderNameInput = document.getElementById('sender-name');
         const senderEmailInput = document.getElementById('sender-email');
@@ -575,7 +575,7 @@
         const recipientEmailInput = document.getElementById('recipient-email');
         const sendDateInput = document.getElementById('send-date');
         const companyNameInput = document.getElementById('company-name');
-        
+        console.log('Variables initialized! (index.html@ln.578)');
         // Close modal buttons
         const closeModalButtons = document.querySelectorAll('.close-modal');
         
@@ -599,7 +599,7 @@
             '{sDate}': 'sendDate',
             '{cName}': 'companyName'
         };
-        
+        console.log('Variables mapped! (index.html@ln.974)');
         // Currently selected component for editing
         let currentlyEditingComponent = null;
         
@@ -609,7 +609,7 @@
             const today = new Date().toISOString().split('T')[0];
             sendDateInput.value = today;
             variables.sendDate = today;
-            
+            console.log('Assigned value to sendDate! (index.html@ln.612)');
             // Load saved variables from localStorage if available
             loadSavedVariables();
             
@@ -634,6 +634,7 @@
                 recipientEmailInput.value = variables.recipientEmail || '';
                 sendDateInput.value = variables.sendDate || new Date().toISOString().split('T')[0];
                 companyNameInput.value = variables.companyName || '';
+                console.log('Loaded saved vars! (index.html@ln.637)');
             }
         }
         
@@ -1180,8 +1181,9 @@
                     </style>
                 </head>
                 <body>
+                
             `;
-            
+            console.log('Final HTML declared! (index.html@ln.1186)');
             components.forEach(component => {
                 finalHtml += replaceVariables(component.content);
             });
@@ -1226,7 +1228,7 @@
         
         // Initialize the app
         init();
-        console.log('App initialized! (index.html@ln.1226, after init() run)');
+        console.log('App initialized! Ready to roll! (index.html@ln.1226, after init() run)');
     </script>
 </body>
 </html>
