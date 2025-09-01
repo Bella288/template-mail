@@ -292,6 +292,14 @@
             display: none;
             z-index: 1001;
         }
+
+        .variable-placeholder {
+            background-color: #f0f5ff;
+            padding: 4px 8px;
+            border-radius: 4px;
+            color: #6e8efb;
+            border: 1px dashed #91d5ff;
+        }
     </style>
 </head>
 <body>
@@ -299,6 +307,7 @@
         <header>
             <div class="logo">Email Template Builder</div>
             <div class="header-buttons">
+                <button class="btn btn-outline" id="variables-btn">Variables</button>
                 <button class="btn btn-outline" id="preview-btn">Preview</button>
                 <button class="btn btn-primary" id="export-btn">Export</button>
             </div>
@@ -330,6 +339,28 @@
                 <div class="component-item" draggable="true" data-type="footer">
                     <strong>Footer</strong>
                     <p>Email footer with links and copyright</p>
+                </div>
+                
+                <h2 style="margin-top: 20px;">Variables</h2>
+                <div class="component-item" draggable="true" data-type="variable" data-var="{rName}">
+                    <strong>Recipient Name</strong>
+                    <p>{rName} - Will be replaced with actual name</p>
+                </div>
+                <div class="component-item" draggable="true" data-type="variable" data-var="{sName}">
+                    <strong>Sender Name</strong>
+                    <p>{sName} - Will be replaced with sender name</p>
+                </div>
+                <div class="component-item" draggable="true" data-type="variable" data-var="{sEmail}">
+                    <strong>Sender Email</strong>
+                    <p>{sEmail} - Will be replaced with sender email</p>
+                </div>
+                <div class="component-item" draggable="true" data-type="variable" data-var="{rEmail}">
+                    <strong>Recipient Email</strong>
+                    <p>{rEmail} - Will be replaced with recipient email</p>
+                </div>
+                <div class="component-item" draggable="true" data-type="variable" data-var="{sDate}">
+                    <strong>Send Date</strong>
+                    <p>{sDate} - Will be replaced with send date</p>
                 </div>
             </div>
             
@@ -377,666 +408,562 @@
         </div>
     </div>
 
+    <div class="preview-modal" id="variables-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Configure Variables</h2>
+                <button class="close-modal">&times;</button>
+            </div>
+            <div class="property-group">
+                <div class="form-group">
+                    <label for="sender-name">Sender Name</label>
+                    <input type="text" id="sender-name" placeholder="e.g., John Doe">
+                </div>
+                <div class="form-group">
+                    <label for="sender-email">Sender Email</label>
+                    <input type="email" id="sender-email" placeholder="e.g., john@example.com">
+                </div>
+                <div class="form-group">
+                    <label for="recipient-name">Recipient Name</label>
+                    <input type="text" id="recipient-name" placeholder="e.g., Jane Smith">
+                </div>
+                <div class="form-group">
+                    <label for="recipient-email">Recipient Email</label>
+                    <input type="email" id="recipient-email" placeholder="e.g., jane@example.com">
+                </div>
+                <div class="form-group">
+                    <label for="send-date">Send Date</label>
+                    <input type="date" id="send-date">
+                </div>
+                <button class="btn btn-primary" id="save-variables">Save Variables</button>
+            </div>
+        </div>
+    </div>
+
     <div class="toast" id="toast">Copied to clipboard!</div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Variables to track state
-            let draggedItem = null;
-            let currentSelectedComponent = null;
-            const canvas = document.getElementById('email-canvas');
-            const propertyEditor = document.getElementById('property-editor');
-            const previewModal = document.getElementById('preview-modal');
-            const exportModal = document.getElementById('export-modal');
-            const previewContent = document.getElementById('preview-content');
-            const exportCodeContainer = document.getElementById('export-code-container');
-            const exportCode = document.getElementById('export-code');
-            const toast = document.getElementById('toast');
+        // DOM Elements
+        const emailCanvas = document.getElementById('email-canvas');
+        const propertyEditor = document.getElementById('property-editor');
+        const previewModal = document.getElementById('preview-modal');
+        const exportModal = document.getElementById('export-modal');
+        const variablesModal = document.getElementById('variables-modal');
+        const previewContent = document.getElementById('preview-content');
+        const exportCode = document.getElementById('export-code');
+        const exportCodeContainer = document.getElementById('export-code-container');
+        const toast = document.getElementById('toast');
+        
+        // Buttons
+        const previewBtn = document.getElementById('preview-btn');
+        const exportBtn = document.getElementById('export-btn');
+        const variablesBtn = document.getElementById('variables-btn');
+        const saveVariablesBtn = document.getElementById('save-variables');
+        
+        // Variable Inputs
+        const senderNameInput = document.getElementById('sender-name');
+        const senderEmailInput = document.getElementById('sender-email');
+        const recipientNameInput = document.getElementById('recipient-name');
+        const recipientEmailInput = document.getElementById('recipient-email');
+        const sendDateInput = document.getElementById('send-date');
+        
+        // Close modal buttons
+        const closeModalButtons = document.querySelectorAll('.close-modal');
+        
+        // Store components and variables
+        let components = [];
+        let variables = {
+            senderName: '',
+            senderEmail: '',
+            recipientName: '',
+            recipientEmail: '',
+            sendDate: ''
+        };
+        
+        // Variable mapping
+        const variableMap = {
+            '{sName}': 'senderName',
+            '{sEmail}': 'senderEmail',
+            '{rName}': 'recipientName',
+            '{rEmail}': 'recipientEmail',
+            '{sDate}': 'sendDate'
+        };
+        
+        // Initialize the application
+        function init() {
+            // Set today's date as default for send date
+            const today = new Date().toISOString().split('T')[0];
+            sendDateInput.value = today;
+            variables.sendDate = today;
             
-            // Remove the placeholder when components are added
-            function checkPlaceholder() {
-                const placeholder = canvas.querySelector('.canvas-placeholder');
-                if (canvas.children.length > 1 && placeholder) {
-                    canvas.removeChild(placeholder);
-                } else if (canvas.children.length === 0) {
-                    canvas.innerHTML = '<div class="canvas-placeholder"><p>Drag components from the left panel to build your email template</p></div>';
+            // Load saved variables from localStorage if available
+            loadSavedVariables();
+            
+            // Set up event listeners
+            setupEventListeners();
+        }
+        
+        // Load saved variables from localStorage
+        function loadSavedVariables() {
+            const savedVariables = localStorage.getItem('emailTemplateVariables');
+            if (savedVariables) {
+                const parsedVariables = JSON.parse(savedVariables);
+                variables = {...variables, ...parsedVariables};
+                
+                // Update input fields
+                senderNameInput.value = variables.senderName || '';
+                senderEmailInput.value = variables.senderEmail || '';
+                recipientNameInput.value = variables.recipientName || '';
+                recipientEmailInput.value = variables.recipientEmail || '';
+                sendDateInput.value = variables.sendDate || new Date().toISOString().split('T')[0];
+            }
+        }
+        
+        // Set up all event listeners
+        function setupEventListeners() {
+            // Drag and drop for components
+            setupDragAndDrop();
+            
+            // Modal buttons
+            previewBtn.addEventListener('click', showPreview);
+            exportBtn.addEventListener('click', showExportModal);
+            variablesBtn.addEventListener('click', showVariablesModal);
+            saveVariablesBtn.addEventListener('click', saveVariables);
+            
+            // Close modals
+            closeModalButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    previewModal.style.display = 'none';
+                    exportModal.style.display = 'none';
+                    variablesModal.style.display = 'none';
+                });
+            });
+            
+            // Export options
+            document.getElementById('export-html').addEventListener('click', exportAsHTML);
+            document.getElementById('export-copy').addEventListener('click', copyToClipboard);
+            
+            // Close modals when clicking outside
+            window.addEventListener('click', (e) => {
+                if (e.target === previewModal) previewModal.style.display = 'none';
+                if (e.target === exportModal) exportModal.style.display = 'none';
+                if (e.target === variablesModal) variablesModal.style.display = 'none';
+            });
+        }
+        
+        // Set up drag and drop functionality
+        function setupDragAndDrop() {
+            const componentItems = document.querySelectorAll('.component-item');
+            
+            componentItems.forEach(item => {
+                item.addEventListener('dragstart', (e) => {
+                    e.dataTransfer.setData('text/plain', JSON.stringify({
+                        type: item.dataset.type,
+                        variable: item.dataset.var || null
+                    }));
+                });
+            });
+            
+            emailCanvas.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                emailCanvas.classList.add('drag-over');
+            });
+            
+            emailCanvas.addEventListener('dragleave', () => {
+                emailCanvas.classList.remove('drag-over');
+            });
+            
+            emailCanvas.addEventListener('drop', (e) => {
+                e.preventDefault();
+                emailCanvas.classList.remove('drag-over');
+                
+                const data = JSON.parse(e.dataTransfer.getData('text/plain'));
+                
+                if (data.type === 'variable') {
+                    addVariableToCanvas(data.variable);
+                } else {
+                    addComponentToCanvas(data.type);
                 }
+            });
+        }
+        
+        // Add a variable to the canvas
+        function addVariableToCanvas(variable) {
+            // Remove the placeholder if it exists
+            const placeholder = emailCanvas.querySelector('.canvas-placeholder');
+            if (placeholder) {
+                placeholder.remove();
             }
             
-            // Initialize drag and drop functionality
-            function initDragAndDrop() {
-                const components = document.querySelectorAll('.component-item');
-                
-                components.forEach(component => {
-                    component.addEventListener('dragstart', function(e) {
-                        draggedItem = e.target;
-                        e.dataTransfer.setData('text/plain', e.target.getAttribute('data-type'));
-                        e.dataTransfer.effectAllowed = 'copy';
-                        setTimeout(() => {
-                            e.target.style.opacity = '0.5';
-                        }, 0);
-                    });
-                    
-                    component.addEventListener('dragend', function(e) {
-                        e.target.style.opacity = '1';
-                    });
-                });
-                
-                // Enable dropping on the canvas
-                canvas.addEventListener('dragover', function(e) {
-                    e.preventDefault();
-                    e.dataTransfer.dropEffect = 'copy';
-                    canvas.classList.add('drag-over');
-                });
-                
-                canvas.addEventListener('dragenter', function(e) {
-                    e.preventDefault();
-                    canvas.classList.add('drag-over');
-                });
-                
-                canvas.addEventListener('dragleave', function() {
-                    canvas.classList.remove('drag-over');
-                });
-                
-                canvas.addEventListener('drop', function(e) {
-                    e.preventDefault();
-                    canvas.classList.remove('drag-over');
-                    
-                    const componentType = e.dataTransfer.getData('text/plain');
-                    addComponentToCanvas(componentType);
-                });
+            const variableElement = document.createElement('div');
+            variableElement.className = 'email-component';
+            variableElement.innerHTML = `
+                <span class="variable-placeholder">${variable}</span>
+                <div class="component-tools">
+                    <button class="edit-btn">Edit</button>
+                    <button class="delete-btn">Delete</button>
+                </div>
+            `;
+            
+            // Add event listeners for the tools
+            const deleteBtn = variableElement.querySelector('.delete-btn');
+            deleteBtn.addEventListener('click', () => {
+                variableElement.remove();
+                updateComponentsArray();
+                checkEmptyCanvas();
+            });
+            
+            emailCanvas.appendChild(variableElement);
+            updateComponentsArray();
+        }
+        
+        // Add a component to the canvas
+        function addComponentToCanvas(type) {
+            // Remove the placeholder if it exists
+            const placeholder = emailCanvas.querySelector('.canvas-placeholder');
+            if (placeholder) {
+                placeholder.remove();
             }
             
-            // Add a component to the canvas
-            function addComponentToCanvas(type) {
-                const id = 'component-' + Date.now();
-                let html = '';
-                
-                switch(type) {
-                    case 'header':
-                        html = `
-                            <div class="email-component" data-type="header" id="${id}">
-                                <div class="component-tools">
-                                    <button class="edit-btn">Edit</button>
-                                    <button class="delete-btn">Delete</button>
-                                </div>
-                                <table width="100%" cellpadding="0" cellspacing="0" border="0">
-                                    <tr>
-                                        <td align="center" style="padding: 20px 0;">
-                                            <img src="https://via.placeholder.com/150x50" alt="Company Logo" style="max-width: 150px;">
-                                        </td>
-                                    </tr>
-                                </table>
-                            </div>
-                        `;
-                        break;
-                    case 'hero':
-                        html = `
-                            <div class="email-component" data-type="hero" id="${id}">
-                                <div class="component-tools">
-                                    <button class="edit-btn">Edit</button>
-                                    <button class="delete-btn">Delete</button>
-                                </div>
-                                <table width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#6e8efb">
-                                    <tr>
-                                        <td align="center" style="padding: 40px 20px; color: white;">
-                                            <h1 style="margin: 0 0 20px 0;">Welcome to our newsletter</h1>
-                                            <p style="margin: 0 0 30px 0; font-size: 16px;">Discover our latest products and offers</p>
-                                            <a href="#" style="display: inline-block; padding: 12px 30px; background-color: white; color: #6e8efb; text-decoration: none; border-radius: 4px; font-weight: bold;">Shop Now</a>
-                                        </td>
-                                    </tr>
-                                </table>
-                            </div>
-                        `;
-                        break;
-                    case 'text':
-                        html = `
-                            <div class="email-component" data-type="text" id="${id}">
-                                <div class="component-tools">
-                                    <button class="edit-btn">Edit</button>
-                                    <button class="delete-btn">Delete</button>
-                                </div>
-                                <table width="100%" cellpadding="0" cellspacing="0" border="0">
-                                    <tr>
-                                        <td align="left" style="padding: 20px;">
-                                            <h2>Your heading here</h2>
-                                            <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
-                                        </td>
-                                    </tr>
-                                </table>
-                            </div>
-                        `;
-                        break;
-                    case 'image':
-                        html = `
-                            <div class="email-component" data-type="image" id="${id}">
-                                <div class="component-tools">
-                                    <button class="edit-btn">Edit</button>
-                                    <button class="delete-btn">Delete</button>
-                                </div>
-                                <table width="100%" cellpadding="0" cellspacing="0" border="0">
-                                    <tr>
-                                        <td align="center" style="padding: 20px;">
-                                            <img src="https://via.placeholder.com/600x300" alt="Placeholder Image" style="max-width: 100%;">
-                                        </td>
-                                    </tr>
-                                </table>
-                            </div>
-                        `;
-                        break;
-                    case 'button':
-                        html = `
-                            <div class="email-component" data-type="button" id="${id}">
-                                <div class="component-tools">
-                                    <button class="edit-btn">Edit</button>
-                                    <button class="delete-btn">Delete</button>
-                                </div>
-                                <table width="100%" cellpadding="0" cellspacing="0" border="0">
-                                    <tr>
-                                        <td align="center" style="padding: 20px;">
-                                            <a href="#" style="display: inline-block; padding: 12px 30px; background-color: #6e8efb; color: white; text-decoration: none; border-radius: 4px; font-weight: bold;">Click Me</a>
-                                        </td>
-                                    </tr>
-                                </table>
-                            </div>
-                        `;
-                        break;
-                    case 'footer':
-                        html = `
-                            <div class="email-component" data-type="footer" id="${id}">
-                                <div class="component-tools">
-                                    <button class="edit-btn">Edit</button>
-                                    <button class="delete-btn">Delete</button>
-                                </div>
-                                <table width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f5f7f9">
-                                    <tr>
-                                        <td align="center" style="padding: 30px 20px;">
-                                            <p style="margin: 0 0 15px 0; color: #666; font-size: 14px;">
-                                                <a href="#" style="color: #6e8efb; text-decoration: none; margin: 0 10px;">Unsubscribe</a>
-                                                <a href="#" style="color: #6e8efb; text-decoration: none; margin: 0 10px;">Privacy Policy</a>
-                                                <a href="#" style="color: #6e8efb; text-decoration: none; margin: 0 10px;">Contact Us</a>
-                                            </p>
-                                            <p style="margin: 0; color: #999; font-size: 12px;">&copy; 2023 Company Name. All rights reserved.</p>
-                                        </td>
-                                    </tr>
-                                </table>
-                            </div>
-                        `;
-                        break;
+            let componentHtml = '';
+            let defaultContent = '';
+            
+            switch (type) {
+                case 'header':
+                    defaultContent = '<h1>Email Header</h1><p>Company Logo and Navigation</p>';
+                    break;
+                case 'hero':
+                    defaultContent = '<div style="text-align: center; padding: 40px; background-color: #f0f0f0;"><h2>Hero Section</h2><p>Engaging content goes here</p></div>';
+                    break;
+                case 'text':
+                    defaultContent = '<p>This is a text block. You can edit this content to add your own text.</p>';
+                    break;
+                case 'image':
+                    defaultContent = '<img src="https://via.placeholder.com/600x300" alt="Placeholder Image" style="max-width: 100%; height: auto;">';
+                    break;
+                case 'button':
+                    defaultContent = '<div style="text-align: center; margin: 20px 0;"><a href="#" style="display: inline-block; padding: 12px 24px; background-color: #6e8efb; color: white; text-decoration: none; border-radius: 4px;">Click Me</a></div>';
+                    break;
+                case 'footer':
+                    defaultContent = '<div style="text-align: center; padding: 20px; background-color: #f5f5f5; margin-top: 20px;"><p>&copy; 2023 Company Name. All rights reserved.</p></div>';
+                    break;
+            }
+            
+            componentHtml = `
+                <div class="component-content">${defaultContent}</div>
+                <div class="component-tools">
+                    <button class="edit-btn">Edit</button>
+                    <button class="delete-btn">Delete</button>
+                </div>
+            `;
+            
+            const componentElement = document.createElement('div');
+            componentElement.className = 'email-component';
+            componentElement.setAttribute('data-type', type);
+            componentElement.innerHTML = componentHtml;
+            
+            // Add event listeners for the tools
+            const editBtn = componentElement.querySelector('.edit-btn');
+            const deleteBtn = componentElement.querySelector('.delete-btn');
+            
+            editBtn.addEventListener('click', () => {
+                showPropertyEditor(componentElement, type);
+            });
+            
+            deleteBtn.addEventListener('click', () => {
+                componentElement.remove();
+                updateComponentsArray();
+                checkEmptyCanvas();
+            });
+            
+            // Also make the whole component clickable for editing
+            componentElement.addEventListener('click', (e) => {
+                if (e.target === componentElement || e.target.classList.contains('component-content')) {
+                    showPropertyEditor(componentElement, type);
                 }
-                
-                // Remove placeholder if it exists
-                checkPlaceholder();
-                
-                // Add the component to the canvas
-                canvas.insertAdjacentHTML('beforeend', html);
-                
-                // Add event listeners to the new component
-                const newComponent = document.getElementById(id);
-                initComponentEvents(newComponent);
+            });
+            
+            emailCanvas.appendChild(componentElement);
+            updateComponentsArray();
+        }
+        
+        // Show property editor for a component
+        function showPropertyEditor(component, type) {
+            let editorHtml = '';
+            
+            switch (type) {
+                case 'text':
+                    const currentText = component.querySelector('.component-content').innerHTML;
+                    editorHtml = `
+                        <div class="property-group">
+                            <h3>Text Content</h3>
+                            <div class="form-group">
+                                <label for="text-content">Text</label>
+                                <textarea id="text-content" rows="6">${currentText}</textarea>
+                            </div>
+                            <button class="btn btn-primary" id="save-text">Save Changes</button>
+                        </div>
+                    `;
+                    break;
+                case 'image':
+                    const currentSrc = component.querySelector('img')?.src || '';
+                    editorHtml = `
+                        <div class="property-group">
+                            <h3>Image Properties</h3>
+                            <div class="form-group">
+                                <label for="image-src">Image URL</label>
+                                <input type="text" id="image-src" value="${currentSrc}" placeholder="https://example.com/image.jpg">
+                            </div>
+                            <div class="form-group">
+                                <label for="image-alt">Alt Text</label>
+                                <input type="text" id="image-alt" value="${component.querySelector('img')?.alt || ''}" placeholder="Description of image">
+                            </div>
+                            <div class="form-group">
+                                <label for="image-link">Link URL (optional)</label>
+                                <input type="text" id="image-link" value="${component.querySelector('a')?.href || ''}" placeholder="https://example.com">
+                            </div>
+                            <button class="btn btn-primary" id="save-image">Save Changes</button>
+                        </div>
+                    `;
+                    break;
+                case 'button':
+                    const currentButton = component.querySelector('a');
+                    editorHtml = `
+                        <div class="property-group">
+                            <h3>Button Properties</h3>
+                            <div class="form-group">
+                                <label for="button-text">Button Text</label>
+                                <input type="text" id="button-text" value="${currentButton.textContent}" placeholder="Button Text">
+                            </div>
+                            <div class="form-group">
+                                <label for="button-link">Button Link</label>
+                                <input type="text" id="button-link" value="${currentButton.href}" placeholder="https://example.com">
+                            </div>
+                            <div class="form-group">
+                                <label for="button-color">Button Color</label>
+                                <input type="color" id="button-color" value="${currentButton.style.backgroundColor || '#6e8efb'}">
+                            </div>
+                            <button class="btn btn-primary" id="save-button">Save Changes</button>
+                        </div>
+                    `;
+                    break;
+                default:
+                    editorHtml = `<p>No properties to edit for this component.</p>`;
             }
             
-            // Initialize component events (edit, delete, select)
-            function initComponentEvents(component) {
-                const deleteBtn = component.querySelector('.delete-btn');
-                const editBtn = component.querySelector('.edit-btn');
-                
-                deleteBtn.addEventListener('click', function() {
-                    component.remove();
-                    checkPlaceholder();
-                    propertyEditor.innerHTML = '<p>Select a component to edit its properties</p>';
-                    currentSelectedComponent = null;
+            propertyEditor.innerHTML = editorHtml;
+            
+            // Set up save handlers based on component type
+            if (type === 'text') {
+                document.getElementById('save-text').addEventListener('click', () => {
+                    const newContent = document.getElementById('text-content').value;
+                    component.querySelector('.component-content').innerHTML = newContent;
+                    updateComponentsArray();
                 });
-                
-                editBtn.addEventListener('click', function() {
-                    selectComponent(component);
-                });
-                
-                component.addEventListener('click', function(e) {
-                    if (e.target !== deleteBtn && e.target !== editBtn) {
-                        selectComponent(component);
+            } else if (type === 'image') {
+                document.getElementById('save-image').addEventListener('click', () => {
+                    const src = document.getElementById('image-src').value;
+                    const alt = document.getElementById('image-alt').value;
+                    const link = document.getElementById('image-link').value;
+                    
+                    let imageHtml = `<img src="${src}" alt="${alt}" style="max-width: 100%; height: auto;">`;
+                    
+                    if (link) {
+                        imageHtml = `<a href="${link}">${imageHtml}</a>`;
                     }
+                    
+                    component.querySelector('.component-content').innerHTML = imageHtml;
+                    updateComponentsArray();
+                });
+            } else if (type === 'button') {
+                document.getElementById('save-button').addEventListener('click', () => {
+                    const text = document.getElementById('button-text').value;
+                    const link = document.getElementById('button-link').value;
+                    const color = document.getElementById('button-color').value;
+                    
+                    const buttonHtml = `
+                        <a href="${link}" style="display: inline-block; padding: 12px 24px; background-color: ${color}; color: white; text-decoration: none; border-radius: 4px;">${text}</a>
+                    `;
+                    
+                    component.querySelector('.component-content').innerHTML = buttonHtml;
+                    updateComponentsArray();
                 });
             }
+        }
+        
+        // Update the components array from the DOM
+        function updateComponentsArray() {
+            components = [];
+            const componentElements = emailCanvas.querySelectorAll('.email-component');
             
-            // Select a component and show its properties
-            function selectComponent(component) {
-                // Remove previous selection
-                if (currentSelectedComponent) {
-                    currentSelectedComponent.style.outline = 'none';
+            componentElements.forEach(element => {
+                if (element.querySelector('.variable-placeholder')) {
+                    // It's a variable
+                    components.push({
+                        type: 'variable',
+                        content: element.querySelector('.variable-placeholder').textContent
+                    });
+                } else {
+                    // It's a regular component
+                    components.push({
+                        type: element.dataset.type,
+                        content: element.querySelector('.component-content').innerHTML
+                    });
                 }
-                
-                // Set new selection
-                currentSelectedComponent = component;
-                component.style.outline = '2px solid #6e8efb';
-                
-                // Show properties in the properties panel
-                const type = component.getAttribute('data-type');
-                showPropertiesPanel(type, component);
+            });
+        }
+        
+        // Check if canvas is empty and show placeholder
+        function checkEmptyCanvas() {
+            if (emailCanvas.children.length === 0) {
+                const placeholder = document.createElement('div');
+                placeholder.className = 'canvas-placeholder';
+                placeholder.innerHTML = '<p>Drag components from the left panel to build your email template</p>';
+                emailCanvas.appendChild(placeholder);
             }
+        }
+        
+        // Show preview modal
+        function showPreview() {
+            updateComponentsArray();
             
-            // Show the properties panel for the selected component
-            function showPropertiesPanel(type, component) {
-                let html = '';
-                
-                // Get current values from the component
-                let currentValues = {};
-                
-                switch(type) {
-                    case 'header':
-                        const headerImg = component.querySelector('img');
-                        currentValues = {
-                            logoUrl: headerImg.src,
-                            altText: headerImg.alt
-                        };
-                        break;
-                    case 'hero':
-                        const title = component.querySelector('h1');
-                        const text = component.querySelector('p');
-                        const button = component.querySelector('a');
-                        const bgColor = component.querySelector('table').bgColor;
-                        currentValues = {
-                            title: title.textContent,
-                            text: text.textContent,
-                            buttonText: button.textContent,
-                            buttonLink: button.href,
-                            bgColor: bgColor
-                        };
-                        break;
-                    case 'text':
-                        const heading = component.querySelector('h2');
-                        const content = component.querySelector('p');
-                        const align = component.querySelector('td').align;
-                        currentValues = {
-                            heading: heading.textContent,
-                            content: content.textContent,
-                            align: align
-                        };
-                        break;
-                    case 'image':
-                        const image = component.querySelector('img');
-                        const link = component.querySelector('a');
-                        currentValues = {
-                            imageUrl: image.src,
-                            altText: image.alt,
-                            linkUrl: link ? link.href : ''
-                        };
-                        break;
-                    case 'button':
-                        const btn = component.querySelector('a');
-                        const btnColor = btn.style.backgroundColor;
-                        const textColor = btn.style.color;
-                        currentValues = {
-                            buttonText: btn.textContent,
-                            buttonLink: btn.href,
-                            buttonColor: btnColor,
-                            textColor: textColor
-                        };
-                        break;
-                    case 'footer':
-                        const copyright = component.querySelector('p:last-child');
-                        const bg = component.querySelector('table').bgColor;
-                        currentValues = {
-                            copyright: copyright.innerHTML,
-                            bgColor: bg
-                        };
-                        break;
-                }
-                
-                switch(type) {
-                    case 'header':
-                        html = `
-                            <div class="property-group">
-                                <h3>Header Settings</h3>
-                                <div class="form-group">
-                                    <label for="header-logo">Logo URL</label>
-                                    <input type="text" id="header-logo" value="${currentValues.logoUrl}">
-                                </div>
-                                <div class="form-group">
-                                    <label for="header-alt">Alt Text</label>
-                                    <input type="text" id="header-alt" value="${currentValues.altText}">
-                                </div>
-                                <button class="btn btn-primary" id="header-save">Apply Changes</button>
-                            </div>
-                        `;
-                        break;
-                    case 'hero':
-                        html = `
-                            <div class="property-group">
-                                <h3>Hero Section Settings</h3>
-                                <div class="form-group">
-                                    <label for="hero-title">Title</label>
-                                    <input type="text" id="hero-title" value="${currentValues.title}">
-                                </div>
-                                <div class="form-group">
-                                    <label for="hero-text">Text</label>
-                                    <textarea id="hero-text">${currentValues.text}</textarea>
-                                </div>
-                                <div class="form-group">
-                                    <label for="hero-button">Button Text</label>
-                                    <input type="text" id="hero-button" value="${currentValues.buttonText}">
-                                </div>
-                                <div class="form-group">
-                                    <label for="hero-link">Button Link</label>
-                                    <input type="text" id="hero-link" value="${currentValues.buttonLink}">
-                                </div>
-                                <div class="form-group">
-                                    <label for="hero-bg">Background Color</label>
-                                    <input type="color" id="hero-bg" value="${currentValues.bgColor}">
-                                </div>
-                                <button class="btn btn-primary" id="hero-save">Apply Changes</button>
-                            </div>
-                        `;
-                        break;
-                    case 'text':
-                        html = `
-                            <div class="property-group">
-                                <h3>Text Settings</h3>
-                                <div class="form-group">
-                                    <label for="text-heading">Heading</label>
-                                    <input type="text" id="text-heading" value="${currentValues.heading}">
-                                </div>
-                                <div class="form-group">
-                                    <label for="text-content">Content</label>
-                                    <textarea id="text-content" rows="5">${currentValues.content}</textarea>
-                                </div>
-                                <div class="form-group">
-                                    <label for="text-align">Alignment</label>
-                                    <select id="text-align">
-                                        <option value="left" ${currentValues.align === 'left' ? 'selected' : ''}>Left</option>
-                                        <option value="center" ${currentValues.align === 'center' ? 'selected' : ''}>Center</option>
-                                        <option value="right" ${currentValues.align === 'right' ? 'selected' : ''}>Right</option>
-                                    </select>
-                                </div>
-                                <button class="btn btn-primary" id="text-save">Apply Changes</button>
-                            </div>
-                        `;
-                        break;
-                    case 'image':
-                        html = `
-                            <div class="property-group">
-                                <h3>Image Settings</h3>
-                                <div class="form-group">
-                                    <label for="image-src">Image URL</label>
-                                    <input type="text" id="image-src" value="${currentValues.imageUrl}">
-                                </div>
-                                <div class="form-group">
-                                    <label for="image-alt">Alt Text</label>
-                                    <input type="text" id="image-alt" value="${currentValues.altText}">
-                                </div>
-                                <div class="form-group">
-                                    <label for="image-link">Link URL</label>
-                                    <input type="text" id="image-link" value="${currentValues.linkUrl}">
-                                </div>
-                                <button class="btn btn-primary" id="image-save">Apply Changes</button>
-                            </div>
-                        `;
-                        break;
-                    case 'button':
-                        html = `
-                            <div class="property-group">
-                                <h3>Button Settings</h3>
-                                <div class="form-group">
-                                    <label for="button-text">Button Text</label>
-                                    <input type="text" id="button-text" value="${currentValues.buttonText}">
-                                </div>
-                                <div class="form-group">
-                                    <label for="button-link">Button Link</label>
-                                    <input type="text" id="button-link" value="${currentValues.buttonLink}">
-                                </div>
-                                <div class="form-group">
-                                    <label for="button-color">Button Color</label>
-                                    <input type="color" id="button-color" value="${currentValues.buttonColor || '#6e8efb'}">
-                                </div>
-                                <div class="form-group">
-                                    <label for="button-text-color">Text Color</label>
-                                    <input type="color" id="button-text-color" value="${currentValues.textColor || '#ffffff'}">
-                                </div>
-                                <button class="btn btn-primary" id="button-save">Apply Changes</button>
-                            </div>
-                        `;
-                        break;
-                    case 'footer':
-                        html = `
-                            <div class="property-group">
-                                <h3>Footer Settings</h3>
-                                <div class="form-group">
-                                    <label for="footer-copyright">Copyright Text</label>
-                                    <input type="text" id="footer-copyright" value="${currentValues.copyright}">
-                                </div>
-                                <div class="form-group">
-                                    <label for="footer-bg">Background Color</label>
-                                    <input type="color" id="footer-bg" value="${currentValues.bgColor || '#f5f7f9'}">
-                                </div>
-                                <button class="btn btn-primary" id="footer-save">Apply Changes</button>
-                            </div>
-                        `;
-                        break;
-                }
-                
-                propertyEditor.innerHTML = html;
-                
-                // Add event listeners to the save button
-                const saveButton = propertyEditor.querySelector('button');
-                saveButton.addEventListener('click', function() {
-                    updateComponent(component, type);
-                });
-            }
+            let previewHtml = '';
             
-            // Update component based on property changes
-            function updateComponent(component, type) {
-                switch(type) {
-                    case 'header':
-                        const logoUrl = document.getElementById('header-logo').value;
-                        const headerAltText = document.getElementById('header-alt').value;
-                        const headerImg = component.querySelector('img');
-                        headerImg.src = logoUrl;
-                        headerImg.alt = headerAltText;
-                        break;
-                    case 'hero':
-                        const title = document.getElementById('hero-title').value;
-                        const text = document.getElementById('hero-text').value;
-                        const buttonText = document.getElementById('hero-button').value;
-                        const buttonLink = document.getElementById('hero-link').value;
-                        const bgColor = document.getElementById('hero-bg').value;
-                        
-                        component.querySelector('h1').textContent = title;
-                        component.querySelector('p').textContent = text;
-                        component.querySelector('a').textContent = buttonText;
-                        component.querySelector('a').href = buttonLink;
-                        component.querySelector('table').bgColor = bgColor;
-                        break;
-                    case 'text':
-                        const heading = document.getElementById('text-heading').value;
-                        const content = document.getElementById('text-content').value;
-                        const align = document.getElementById('text-align').value;
-                        
-                        component.querySelector('h2').textContent = heading;
-                        component.querySelector('p').textContent = content;
-                        component.querySelector('td').align = align;
-                        break;
-                    case 'image':
-                        const imageUrl = document.getElementById('image-src').value;
-                        const imageAltText = document.getElementById('image-alt').value;
-                        const linkUrl = document.getElementById('image-link').value;
-                        
-                        const image = component.querySelector('img');
-                        image.src = imageUrl;
-                        image.alt = imageAltText;
-                        
-                        // Add link if provided
-                        if (linkUrl) {
-                            const link = document.createElement('a');
-                            link.href = linkUrl;
-                            image.parentNode.innerHTML = '';
-                            link.appendChild(image);
-                            image.parentNode.parentNode.appendChild(link);
+            components.forEach(component => {
+                if (component.type === 'variable') {
+                    // Replace variable with actual value
+                    const variableKey = variableMap[component.content];
+                    const variableValue = variables[variableKey] || component.content;
+                    previewHtml += `<div class="variable-preview">${variableValue}</div>`;
+                } else {
+                    previewHtml += component.content;
+                }
+            });
+            
+            previewContent.innerHTML = previewHtml;
+            previewModal.style.display = 'flex';
+        }
+        
+        // Show export modal
+        function showExportModal() {
+            updateComponentsArray();
+            exportModal.style.display = 'flex';
+            exportCodeContainer.style.display = 'none';
+        }
+        
+        // Show variables modal
+        function showVariablesModal() {
+            variablesModal.style.display = 'flex';
+        }
+        
+        // Save variables
+        function saveVariables() {
+            variables = {
+                senderName: senderNameInput.value,
+                senderEmail: senderEmailInput.value,
+                recipientName: recipientNameInput.value,
+                recipientEmail: recipientEmailInput.value,
+                sendDate: sendDateInput.value
+            };
+            
+            // Save to localStorage
+            localStorage.setItem('emailTemplateVariables', JSON.stringify(variables));
+            
+            // Show success message
+            showToast('Variables saved successfully!');
+            
+            // Close modal after a short delay
+            setTimeout(() => {
+                variablesModal.style.display = 'none';
+            }, 1000);
+        }
+        
+        // Export as HTML
+        function exportAsHTML() {
+            updateComponentsArray();
+            
+            let finalHtml = `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="UTF-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    <title>Email Template</title>
+                    <style>
+                        body {
+                            font-family: Arial, sans-serif;
+                            line-height: 1.6;
+                            color: #333;
+                            max-width: 600px;
+                            margin: 0 auto;
                         }
-                        break;
-                    case 'button':
-                        const btnText = document.getElementById('button-text').value;
-                        const btnLink = document.getElementById('button-link').value;
-                        const btnColor = document.getElementById('button-color').value;
-                        const btnTextColor = document.getElementById('button-text-color').value;
-                        
-                        const button = component.querySelector('a');
-                        button.textContent = btnText;
-                        button.href = btnLink;
-                        button.style.backgroundColor = btnColor;
-                        button.style.color = btnTextColor;
-                        break;
-                    case 'footer':
-                        const copyright = document.getElementById('footer-copyright').value;
-                        const footerBg = document.getElementById('footer-bg').value;
-                        
-                        component.querySelector('p:last-child').innerHTML = copyright;
-                        component.querySelector('table').bgColor = footerBg;
-                        break;
+                        .variable-placeholder {
+                            background-color: #f0f5ff;
+                            padding: 4px 8px;
+                            border-radius: 4px;
+                            color: #6e8efb;
+                            border: 1px dashed #91d5ff;
+                        }
+                    </style>
+                </head>
+                <body>
+            `;
+            
+            components.forEach(component => {
+                if (component.type === 'variable') {
+                    const variableKey = variableMap[component.content];
+                    const variableValue = variables[variableKey] || component.content;
+                    finalHtml += `<span class="variable-placeholder">${variableValue}</span>`;
+                } else {
+                    finalHtml += component.content;
                 }
-                
-                showToast('Changes applied successfully!');
-            }
+            });
             
-            // Generate HTML code for export
-            function generateHTML() {
-                const components = canvas.querySelectorAll('.email-component');
-                let html = `<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Email Template</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            line-height: 1.6;
-            margin: 0;
-            padding: 0;
-            background-color: #f5f5f5;
-        }
-        .email-container {
-            max-width: 600px;
-            margin: 0 auto;
-            background-color: #ffffff;
-        }
-        img {
-            max-width: 100%;
-            height: auto;
-        }
-        a {
-            text-decoration: none;
-        }
-        @media screen and (max-width: 600px) {
-            .email-container {
-                width: 100% !important;
-            }
-        }
-    </style>
-</head>
-<body>
-    <div class="email-container">`;
-                
-                components.forEach(component => {
-                    // Clone to avoid modifying the original
-                    const clone = component.cloneNode(true);
-                    
-                    // Remove edit tools
-                    const tools = clone.querySelector('.component-tools');
-                    if (tools) tools.remove();
-                    
-                    // Remove outline
-                    clone.style.outline = 'none';
-                    
-                    html += clone.outerHTML;
-                });
-                
-                html += `</div>
-</body>
-</html>`;
-                
-                return html;
-            }
+            finalHtml += `
+                </body>
+                </html>
+            `;
             
-            // Show toast notification
-            function showToast(message) {
-                toast.textContent = message;
-                toast.style.display = 'block';
-                
-                setTimeout(() => {
-                    toast.style.display = 'none';
-                }, 3000);
-            }
+            exportCode.textContent = finalHtml;
+            exportCodeContainer.style.display = 'block';
+        }
+        
+        // Copy to clipboard
+        function copyToClipboard() {
+            updateComponentsArray();
             
-            // Initialize modals
-            function initModals() {
-                const previewBtn = document.getElementById('preview-btn');
-                const exportBtn = document.getElementById('export-btn');
-                const closeModalButtons = document.querySelectorAll('.close-modal');
-                const exportHtmlBtn = document.getElementById('export-html');
-                const exportCopyBtn = document.getElementById('export-copy');
-                
-                previewBtn.addEventListener('click', function() {
-                    previewContent.innerHTML = canvas.innerHTML;
-                    // Remove edit/delete buttons for preview
-                    const tools = previewContent.querySelectorAll('.component-tools');
-                    tools.forEach(tool => tool.remove());
-                    // Remove outlines
-                    const components = previewContent.querySelectorAll('.email-component');
-                    components.forEach(comp => comp.style.outline = 'none');
-                    previewModal.style.display = 'flex';
-                });
-                
-                exportBtn.addEventListener('click', function() {
-                    exportModal.style.display = 'flex';
-                    exportCodeContainer.style.display = 'none';
-                });
-                
-                closeModalButtons.forEach(button => {
-                    button.addEventListener('click', function() {
-                        previewModal.style.display = 'none';
-                        exportModal.style.display = 'none';
-                    });
-                });
-                
-                // Close modal when clicking outside
-                window.addEventListener('click', function(e) {
-                    if (e.target === previewModal) {
-                        previewModal.style.display = 'none';
-                    }
-                    if (e.target === exportModal) {
-                        exportModal.style.display = 'none';
-                    }
-                });
-                
-                // Export options
-                exportHtmlBtn.addEventListener('click', function() {
-                    const htmlCode = generateHTML();
-                    exportCode.textContent = htmlCode;
-                    exportCodeContainer.style.display = 'block';
-                });
-                
-                exportCopyBtn.addEventListener('click', function() {
-                    const htmlCode = generateHTML();
-                    navigator.clipboard.writeText(htmlCode).then(() => {
-                        showToast('HTML copied to clipboard!');
-                        exportModal.style.display = 'none';
-                    }).catch(err => {
-                        console.error('Failed to copy: ', err);
-                        showToast('Failed to copy to clipboard');
-                    });
-                });
-            }
+            let finalHtml = '';
             
-            // Initialize the application
-            function init() {
-                initDragAndDrop();
-                initModals();
-                checkPlaceholder();
-            }
+            components.forEach(component => {
+                if (component.type === 'variable') {
+                    const variableKey = variableMap[component.content];
+                    const variableValue = variables[variableKey] || component.content;
+                    finalHtml += variableValue;
+                } else {
+                    finalHtml += component.content;
+                }
+            });
             
-            // Start the application
-            init();
-        });
+            navigator.clipboard.writeText(finalHtml).then(() => {
+                showToast('Copied to clipboard!');
+            }).catch(err => {
+                showToast('Failed to copy to clipboard');
+                console.error('Could not copy text: ', err);
+            });
+        }
+        
+        // Show toast notification
+        function showToast(message) {
+            toast.textContent = message;
+            toast.style.display = 'block';
+            
+            setTimeout(() => {
+                toast.style.display = 'none';
+            }, 3000);
+        }
+        
+        // Initialize the app
+        init();
     </script>
 </body>
 </html>
