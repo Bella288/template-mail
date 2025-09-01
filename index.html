@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Email Template Builder</title>
+    <!-- Add EmailJS SDK -->
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
     <style>
         * {
             box-sizing: border-box;
@@ -99,6 +101,15 @@
         
         .btn-secondary:hover {
             background-color: #dfe6e9;
+        }
+        
+        .btn-success {
+            background-color: #2ecc71;
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background-color: #27ae60;
         }
         
         .editor-area {
@@ -212,7 +223,8 @@
         
         .form-group input[type="text"],
         .form-group textarea,
-        .form-group input[type="color"] {
+        .form-group input[type="color"],
+        .form-group input[type="email"] {
             width: 100%;
             padding: 8px 12px;
             border: 1px solid #ddd;
@@ -342,6 +354,13 @@
             gap: 20px;
         }
         
+        /* Send Email Modal Specific */
+        .send-email-form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
         /* Toast Notification */
         #toast {
             display: none;
@@ -354,6 +373,23 @@
             padding: 12px 20px;
             border-radius: 4px;
             box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+        }
+        
+        /* Status indicators */
+        .status-loading {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 8px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
         
         /* Responsive Design */
@@ -381,6 +417,13 @@
             
             .variables-form {
                 grid-template-columns: 1fr;
+            }
+            
+            .toolbar-buttons {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px;
+                justify-content: flex-end;
             }
         }
     </style>
@@ -426,6 +469,7 @@
                 <div class="toolbar-buttons">
                     <button id="variables-btn" class="btn btn-secondary">Variables</button>
                     <button id="preview-btn" class="btn btn-secondary">Preview</button>
+                    <button id="send-btn" class="btn btn-success">Send Email</button>
                     <button id="export-btn" class="btn btn-primary">Export</button>
                 </div>
             </div>
@@ -547,27 +591,74 @@
         </div>
     </div>
     
+    <!-- Send Email Modal -->
+    <div class="modal" id="send-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Send Email</h2>
+                <button class="close-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="send-email-form">
+                    <div class="form-group">
+                        <label for="send-to">To</label>
+                        <input type="email" id="send-to" placeholder="recipient@example.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="send-subject">Subject</label>
+                        <input type="text" id="send-subject" placeholder="Email subject" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="send-from-name">From Name</label>
+                        <input type="text" id="send-from-name" placeholder="Your Name">
+                    </div>
+                    <div class="form-group">
+                        <label for="send-from-email">From Email</label>
+                        <input type="email" id="send-from-email" placeholder="your-email@example.com">
+                    </div>
+                    <div class="form-group">
+                        <label for="send-reply-to">Reply To (optional)</label>
+                        <input type="email" id="send-reply-to" placeholder="reply-to@example.com">
+                    </div>
+                </div>
+                <div id="send-status" style="margin-top: 15px; padding: 10px; display: none;"></div>
+            </div>
+            <div class="modal-footer">
+                <button id="send-email-btn" class="btn btn-success">Send Now</button>
+                <button class="btn btn-secondary close-modal">Cancel</button>
+            </div>
+        </div>
+    </div>
+    
     <!-- Toast Notification -->
     <div id="toast"></div>
 
     <script>
+        // Initialize EmailJS with your public key
+        // Replace 'YOUR_PUBLIC_KEY' with your actual EmailJS public key
+        emailjs.init("YOUR_PUBLIC_KEY");
+        
         // DOM Elements
         const emailCanvas = document.getElementById('email-canvas');
         const propertyEditor = document.getElementById('property-editor');
         const previewModal = document.getElementById('preview-modal');
         const exportModal = document.getElementById('export-modal');
         const variablesModal = document.getElementById('variables-modal');
+        const sendModal = document.getElementById('send-modal');
         const previewContent = document.getElementById('preview-content');
         const exportCode = document.getElementById('export-code');
         const exportCodeContainer = document.getElementById('export-code-container');
         const toast = document.getElementById('toast');
-        console.log('DOM elements initialized! (index.html@ln.564)');
+        const sendStatus = document.getElementById('send-status');
+        
         // Buttons
         const previewBtn = document.getElementById('preview-btn');
         const exportBtn = document.getElementById('export-btn');
+        const sendBtn = document.getElementById('send-btn');
         const variablesBtn = document.getElementById('variables-btn');
         const saveVariablesBtn = document.getElementById('save-variables');
-        console.log('Buttons initialized! (index.html@ln.570)');
+        const sendEmailBtn = document.getElementById('send-email-btn');
+        
         // Variable Inputs
         const senderNameInput = document.getElementById('sender-name');
         const senderEmailInput = document.getElementById('sender-email');
@@ -575,10 +666,17 @@
         const recipientEmailInput = document.getElementById('recipient-email');
         const sendDateInput = document.getElementById('send-date');
         const companyNameInput = document.getElementById('company-name');
-        console.log('Variables initialized! (index.html@ln.578)');
+        
+        // Send Email Inputs
+        const sendToInput = document.getElementById('send-to');
+        const sendSubjectInput = document.getElementById('send-subject');
+        const sendFromNameInput = document.getElementById('send-from-name');
+        const sendFromEmailInput = document.getElementById('send-from-email');
+        const sendReplyToInput = document.getElementById('send-reply-to');
+        
         // Close modal buttons
         const closeModalButtons = document.querySelectorAll('.close-modal');
-        const version = "v1.0.0"
+        
         // Store components and variables
         let components = [];
         let variables = {
@@ -599,7 +697,7 @@
             '{sDate}': 'sendDate',
             '{cName}': 'companyName'
         };
-        console.log('Variables mapped! (index.html@ln.974)');
+        
         // Currently selected component for editing
         let currentlyEditingComponent = null;
         
@@ -609,7 +707,7 @@
             const today = new Date().toISOString().split('T')[0];
             sendDateInput.value = today;
             variables.sendDate = today;
-            console.log('Assigned value to sendDate! (index.html@ln.612)');
+            
             // Load saved variables from localStorage if available
             loadSavedVariables();
             
@@ -634,7 +732,11 @@
                 recipientEmailInput.value = variables.recipientEmail || '';
                 sendDateInput.value = variables.sendDate || new Date().toISOString().split('T')[0];
                 companyNameInput.value = variables.companyName || '';
-                console.log('Loaded saved vars! (index.html@ln.637)');
+                
+                // Pre-fill send form with saved variables
+                sendToInput.value = variables.recipientEmail || '';
+                sendFromNameInput.value = variables.senderName || '';
+                sendFromEmailInput.value = variables.senderEmail || '';
             }
         }
         
@@ -642,12 +744,14 @@
         function setupEventListeners() {
             // Drag and drop for components
             setupDragAndDrop();
-            console.log('Drag and drop initialized in eventListeners! (index.html@ln.644 in setupEventListeners definition)');
+            
             // Modal buttons
             previewBtn.addEventListener('click', showPreview);
             exportBtn.addEventListener('click', showExportModal);
+            sendBtn.addEventListener('click', showSendModal);
             variablesBtn.addEventListener('click', showVariablesModal);
             saveVariablesBtn.addEventListener('click', saveVariables);
+            sendEmailBtn.addEventListener('click', sendEmail);
             
             // Close modals
             closeModalButtons.forEach(button => {
@@ -655,6 +759,7 @@
                     previewModal.style.display = 'none';
                     exportModal.style.display = 'none';
                     variablesModal.style.display = 'none';
+                    sendModal.style.display = 'none';
                 });
             });
             
@@ -667,6 +772,7 @@
                 if (e.target === previewModal) previewModal.style.display = 'none';
                 if (e.target === exportModal) exportModal.style.display = 'none';
                 if (e.target === variablesModal) variablesModal.style.display = 'none';
+                if (e.target === sendModal) sendModal.style.display = 'none';
             });
         }
         
@@ -676,7 +782,6 @@
             
             componentItems.forEach(item => {
                 item.addEventListener('dragstart', (e) => {
-                    console.log('Drag start! (index.html@ln.678)');
                     e.dataTransfer.setData('text/plain', item.dataset.type);
                 });
             });
@@ -696,7 +801,6 @@
                 
                 const componentType = e.dataTransfer.getData('text/plain');
                 addComponentToCanvas(componentType);
-                console.log('Added component! (index.html@ln.698)', componentType);
             });
         }
         
@@ -706,7 +810,6 @@
             const placeholder = emailCanvas.querySelector('.canvas-placeholder');
             if (placeholder) {
                 placeholder.remove();
-                console.log('Placeholder removed! (index.html@ln.707)');
             }
             
             let componentHtml = '';
@@ -760,7 +863,6 @@
                 componentElement.remove();
                 updateComponentsArray();
                 checkEmptyCanvas();
-                console.log('Deleted component! (index.html@ln.763)', componentElement);
             });
             
             // Also make the whole component clickable for editing
@@ -944,7 +1046,6 @@
                     component.querySelector('.component-content').innerHTML = formattedContent;
                     updateComponentsArray();
                     showToast('Text updated successfully!');
-                    console.log('Text content updated successfully! (index.html@ln.942)');
                 });
             } else if (type === 'image') {
                 document.getElementById('save-image').addEventListener('click', () => {
@@ -961,7 +1062,6 @@
                     component.querySelector('.component-content').innerHTML = imageHtml;
                     updateComponentsArray();
                     showToast('Image updated successfully!');
-                    console.log('Image content updated successfuly! (index.html@ln.959)');
                 });
             } else if (type === 'button') {
                 document.getElementById('save-button').addEventListener('click', () => {
@@ -976,7 +1076,6 @@
                     component.querySelector('.component-content').innerHTML = buttonHtml;
                     updateComponentsArray();
                     showToast('Button updated successfully!');
-                    console.log('Button content updated successfully! (index.html@ln.974)');
                 });
             } else if (type === 'header') {
                 document.getElementById('save-header').addEventListener('click', () => {
@@ -993,7 +1092,6 @@
                     component.querySelector('.component-content').innerHTML = headerHtml;
                     updateComponentsArray();
                     showToast('Header updated successfully!');
-                    console.log('Header content updated successfully! (index.html@ln.991)');
                 });
             } else if (type === 'hero') {
                 document.getElementById('save-hero').addEventListener('click', () => {
@@ -1010,7 +1108,6 @@
                     component.querySelector('.component-content').innerHTML = heroHtml;
                     updateComponentsArray();
                     showToast('Hero section updated successfully!');
-                    console.log('Hero section content updated successfully! (index.html@ln.1008)');
                 });
             } else if (type === 'footer') {
                 document.getElementById('save-footer').addEventListener('click', () => {
@@ -1027,7 +1124,6 @@
                     component.querySelector('.component-content').innerHTML = footerHtml;
                     updateComponentsArray();
                     showToast('Footer updated successfully!');
-                    console.log('Footer content updated successfully! (index.html@ln.1025)');
                 });
             }
         }
@@ -1095,7 +1191,6 @@
             
             if (components.length === 0) {
                 showToast('Add some components to your email first!');
-                console.warn('component_length_error (index.html@ln.1085) - Add some components to your email first!');
                 return;
             }
             
@@ -1115,12 +1210,40 @@
             
             if (components.length === 0) {
                 showToast('Add some components to your email first!');
-                console.warn('component_length_error (index.html@ln.1104) - Add some components to your email first!');
                 return;
             }
             
             exportModal.style.display = 'flex';
             exportCodeContainer.style.display = 'none';
+        }
+        
+        // Show send email modal
+        function showSendModal() {
+            updateComponentsArray();
+            
+            if (components.length === 0) {
+                showToast('Add some components to your email first!');
+                return;
+            }
+            
+            // Pre-fill form with saved variables if available
+            if (variables.recipientEmail) {
+                sendToInput.value = variables.recipientEmail;
+            }
+            
+            if (variables.senderName) {
+                sendFromNameInput.value = variables.senderName;
+            }
+            
+            if (variables.senderEmail) {
+                sendFromEmailInput.value = variables.senderEmail;
+            }
+            
+            // Clear status message
+            sendStatus.style.display = 'none';
+            sendStatus.innerHTML = '';
+            
+            sendModal.style.display = 'flex';
         }
         
         // Show variables modal
@@ -1144,11 +1267,105 @@
             
             // Show success message
             showToast('Variables saved successfully!');
-            console.log('Saved var content success (index.html@ln.1135)');
+            
             // Close modal after a short delay
             setTimeout(() => {
                 variablesModal.style.display = 'none';
             }, 1000);
+        }
+        
+        // Send email using EmailJS
+        function sendEmail() {
+            const toEmail = sendToInput.value.trim();
+            const subject = sendSubjectInput.value.trim();
+            const fromName = sendFromNameInput.value.trim();
+            const fromEmail = sendFromEmailInput.value.trim();
+            const replyTo = sendReplyToInput.value.trim() || fromEmail;
+            
+            // Validate inputs
+            if (!toEmail || !subject || !fromName || !fromEmail) {
+                showStatus('Please fill in all required fields', 'error');
+                return;
+            }
+            
+            if (!isValidEmail(toEmail)) {
+                showStatus('Please enter a valid recipient email', 'error');
+                return;
+            }
+            
+            if (!isValidEmail(fromEmail)) {
+                showStatus('Please enter a valid sender email', 'error');
+                return;
+            }
+            
+            if (replyTo && !isValidEmail(replyTo)) {
+                showStatus('Please enter a valid reply-to email', 'error');
+                return;
+            }
+            
+            // Build email content
+            updateComponentsArray();
+            let emailHtml = '';
+            
+            components.forEach(component => {
+                emailHtml += replaceVariables(component.content);
+            });
+            
+            // Show sending status
+            showStatus('Sending email...', 'loading');
+            
+            // Prepare email parameters
+            const templateParams = {
+                to_email: toEmail,
+                subject: subject,
+                from_name: fromName,
+                from_email: fromEmail,
+                reply_to: replyTo,
+                message: emailHtml
+            };
+            
+            // Send email using EmailJS
+            // Note: You need to set up your EmailJS account and replace 'YOUR_SERVICE_ID' and 'YOUR_TEMPLATE_ID'
+            emailjs.send('YOUR_SERVICE_ID', 'YOUR_TEMPLATE_ID', templateParams)
+                .then(() => {
+                    showStatus('Email sent successfully!', 'success');
+                    
+                    // Clear form after successful send
+                    setTimeout(() => {
+                        sendModal.style.display = 'none';
+                    }, 2000);
+                })
+                .catch((error) => {
+                    console.error('Email sending failed:', error);
+                    showStatus('Failed to send email. Please try again.', 'error');
+                });
+        }
+        
+        // Show status message in send modal
+        function showStatus(message, type) {
+            sendStatus.style.display = 'block';
+            sendStatus.innerHTML = '';
+            
+            const statusElement = document.createElement('div');
+            
+            if (type === 'loading') {
+                statusElement.innerHTML = `<span class="status-loading"></span> ${message}`;
+                statusElement.style.color = '#3498db';
+            } else if (type === 'success') {
+                statusElement.textContent = message;
+                statusElement.style.color = '#2ecc71';
+            } else if (type === 'error') {
+                statusElement.textContent = message;
+                statusElement.style.color = '#e74c3c';
+            }
+            
+            sendStatus.appendChild(statusElement);
+        }
+        
+        // Validate email format
+        function isValidEmail(email) {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            return emailRegex.test(email);
         }
         
         // Export as HTML
@@ -1184,7 +1401,7 @@
                 <body>
                 
             `;
-            console.log('Final HTML declared! (index.html@ln.1186)');
+            
             components.forEach(component => {
                 finalHtml += replaceVariables(component.content);
             });
@@ -1210,7 +1427,6 @@
             
             navigator.clipboard.writeText(finalHtml).then(() => {
                 showToast('Copied to clipboard!');
-                console.log('HTML content -> cb success! (index.html@ln.1199)');
             }).catch(err => {
                 showToast('Failed to copy to clipboard');
                 console.error('Could not copy text: ', err);
@@ -1229,9 +1445,6 @@
         
         // Initialize the app
         init();
-        console.log('App initialized! Ready to roll! (index.html@ln.1226, after init() run)');
-        console.log('Version: ', version)
-        console.log('________________________________________________________________________________________________________________________');
     </script>
 </body>
 </html>
