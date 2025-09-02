@@ -3,871 +3,1554 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QR Code Generator & Scanner</title>
-    <link rel="icon" type="image/png" href="/assets/icons/favicon-96x96.png" sizes="96x96" />
-    <link rel="icon" type="image/svg+xml" href="/assets/icons/favicon.svg" />
-    <link rel="shortcut icon" href="/assets/icons/favicon.ico" />
-    <link rel="apple-touch-icon" sizes="180x180" href="/assets/icons/apple-touch-icon.png" />
-    <meta name="apple-mobile-web-app-title" content="GenScan" />
-    <link rel="manifest" href="/assets/icons/site.webmanifest" />
-    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+    <title>Email Template Builder</title>
+    <!-- Add EmailJS SDK -->
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
     <style>
         * {
+            box-sizing: border-box;
             margin: 0;
             padding: 0;
-            box-sizing: border-box;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
         
         body {
-            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
             color: #333;
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 20px;
+            background-color: #f5f7f9;
         }
         
         .container {
-            width: 100%;
-            max-width: 900px;
-            background: white;
-            border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-            overflow: hidden;
-            margin: 20px 0;
+            display: flex;
+            min-height: 100vh;
         }
         
-        header {
-            background: #4a00e0;
+        /* Sidebar Styles */
+        .sidebar {
+            width: 250px;
+            background-color: #2c3e50;
             color: white;
             padding: 20px;
-            text-align: center;
+            overflow-y: auto;
         }
         
-        h1 {
-            font-size: 2.2rem;
-            margin-bottom: 10px;
+        .sidebar h2 {
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+            border-bottom: 1px solid #4a6278;
+            padding-bottom: 10px;
         }
         
-        .description {
-            font-size: 1rem;
-            opacity: 0.9;
-        }
-        
-        .tabs {
+        .components-list {
             display: flex;
-            background: #f1f1f1;
+            flex-direction: column;
+            gap: 10px;
         }
         
-        .tab {
+        .component-item {
+            background-color: #34495e;
+            padding: 12px;
+            border-radius: 5px;
+            cursor: grab;
+            transition: all 0.2s;
+        }
+        
+        .component-item:hover {
+            background-color: #4a6278;
+            transform: translateY(-2px);
+        }
+        
+        /* Main Content Styles */
+        .main-content {
             flex: 1;
-            padding: 15px;
-            text-align: center;
-            background: #e9e9e9;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .toolbar {
+            background-color: white;
+            padding: 15px 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
             cursor: pointer;
-            transition: all 0.3s ease;
-            font-weight: 600;
+            font-weight: 500;
+            transition: all 0.2s;
         }
         
-        .tab.active {
-            background: white;
-            color: #4a00e0;
-            border-bottom: 3px solid #4a00e0;
+        .btn-primary {
+            background-color: #3498db;
+            color: white;
         }
         
-        .tab-content {
-            display: none;
-            padding: 25px;
+        .btn-primary:hover {
+            background-color: #2980b9;
         }
         
-        .tab-content.active {
-            display: block;
+        .btn-secondary {
+            background-color: #ecf0f1;
+            color: #2c3e50;
         }
         
-        .input-group {
+        .btn-secondary:hover {
+            background-color: #dfe6e9;
+        }
+        
+        .btn-success {
+            background-color: #2ecc71;
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background-color: #27ae60;
+        }
+        
+        .editor-area {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+        
+        /* Canvas Styles */
+        .canvas-container {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        
+        .canvas-header {
             margin-bottom: 20px;
         }
         
-        label {
+        #email-canvas {
+            background-color: white;
+            border: 1px dashed #ddd;
+            min-height: 500px;
+            padding: 20px;
+            border-radius: 5px;
+        }
+        
+        .canvas-placeholder {
+            text-align: center;
+            color: #95a5a6;
+            padding: 40px;
+        }
+        
+        .email-component {
+            border: 1px solid #e0e0e0;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            overflow: hidden;
+            transition: all 0.2s;
+        }
+        
+        .email-component:hover {
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+        }
+        
+        .component-content {
+            padding: 15px;
+        }
+        
+        .component-tools {
+            display: flex;
+            background-color: #f9f9f9;
+            padding: 8px;
+            border-top: 1px solid #e0e0e0;
+            justify-content: flex-end;
+            gap: 8px;
+        }
+        
+        .edit-btn, .delete-btn {
+            padding: 5px 10px;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.85rem;
+        }
+        
+        .edit-btn {
+            background-color: #3498db;
+            color: white;
+        }
+        
+        .delete-btn {
+            background-color: #e74c3c;
+            color: white;
+        }
+        
+        /* Property Editor Styles */
+        .property-editor {
+            width: 350px;
+            background-color: white;
+            border-left: 1px solid #e0e0e0;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        
+        .property-editor h2 {
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .property-group {
+            margin-bottom: 25px;
+        }
+        
+        .property-group h3 {
+            margin-bottom: 15px;
+            font-size: 1.1rem;
+            color: #2c3e50;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-group label {
             display: block;
-            margin-bottom: 8px;
-            font-weight: 600;
-            color: #444;
+            margin-bottom: 5px;
+            font-weight: 500;
         }
         
-        input, textarea, select {
+        .form-group input[type="text"],
+        .form-group textarea,
+        .form-group input[type="color"],
+        .form-group input[type="email"] {
             width: 100%;
-            padding: 12px;
+            padding: 8px 12px;
             border: 1px solid #ddd;
-            border-radius: 8px;
-            font-size: 16px;
-            transition: border 0.3s;
+            border-radius: 4px;
+            font-family: inherit;
         }
         
-        input:focus, textarea:focus, select:focus {
-            border-color: #4a00e0;
-            outline: none;
-        }
-        
-        textarea {
+        .form-group textarea {
             min-height: 100px;
             resize: vertical;
         }
         
-        button {
-            background: #4a00e0;
+        .variable-palette {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin: 15px 0;
+        }
+        
+        .variable-chip {
+            background-color: #e8f4fc;
+            color: #3498db;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .variable-chip:hover {
+            background-color: #d1ebff;
+        }
+        
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        
+        .modal-content {
+            background-color: white;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 800px;
+            max-height: 90vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .modal-header {
+            padding: 15px 20px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .modal-header h2 {
+            margin: 0;
+            font-size: 1.5rem;
+        }
+        
+        .close-modal {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #95a5a6;
+        }
+        
+        .modal-body {
+            padding: 20px;
+            overflow-y: auto;
+            flex: 1;
+        }
+        
+        .modal-footer {
+            padding: 15px 20px;
+            border-top: 1px solid #eee;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+        
+        /* Preview Modal Specific */
+        #preview-content {
+            border: 1px solid #eee;
+            padding: 20px;
+            background-color: white;
+        }
+        
+        /* Export Modal Specific */
+        .export-options {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        
+        #export-code-container {
+            margin-top: 20px;
+        }
+        
+        #export-code {
+            background-color: #f8f9fa;
+            border: 1px solid #eee;
+            border-radius: 4px;
+            padding: 15px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+            position: relative;
+        }
+        
+        .code-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .copy-btn {
+            background-color: #3498db;
             color: white;
             border: none;
-            padding: 14px 20px;
-            border-radius: 8px;
+            padding: 5px 10px;
+            border-radius: 4px;
             cursor: pointer;
-            font-size: 16px;
-            font-weight: 600;
-            width: 100%;
-            transition: background 0.3s;
-            margin-top: 10px;
+            font-size: 0.85rem;
         }
         
-        button:hover {
-            background: #3575fc;
+        .copy-btn:hover {
+            background-color: #2980b9;
         }
         
-        .qr-result {
-            text-align: center;
-            margin-top: 25px;
-            padding: 15px;
-            border-radius: 8px;
-            background: #f9f9f9;
+        /* Variables Modal Specific */
+        .variables-form {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
         }
         
-        #qrcode {
-            margin: 15px auto;
-            padding: 10px;
-            background: white;
-            border-radius: 8px;
-            display: inline-block;
+        /* Send Email Modal Specific */
+        .send-email-form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
         }
         
-        .scanner-container {
-            position: relative;
-            width: 100%;
-            max-width: 500px;
-            margin: 0 auto;
-        }
-        
-        #scan-area {
-            width: 100%;
-            border-radius: 8px;
-            overflow: hidden;
-            position: relative;
-        }
-        
-        #scan-video {
-            width: 100%;
-            background: #333;
-            border-radius: 8px;
-            min-height: 300px;
-        }
-        
-        .scan-box {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 70%;
-            height: 200px;
-            border: 3px solid #4a00e0;
-            border-radius: 8px;
-            box-shadow: 0 0 0 4000px rgba(0, 0, 0, 0.3);
-        }
-        
-        .scan-result {
-            margin-top: 20px;
-            padding: 15px;
-            background: #f9f9f9;
-            border-radius: 8px;
-        }
-        
-        .download-btn {
-            background: #00c853;
-            margin-top: 15px;
-        }
-        
-        .download-btn:hover {
-            background: #009624;
-        }
-        
-        .footer {
-            margin-top: 20px;
-            text-align: center;
-            color: white;
-            font-size: 0.9rem;
-        }
-        
-        .contact-section {
-            background: #f0f4ff;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-        }
-        
-        .contact-section h3 {
-            margin-bottom: 15px;
-            color: #4a00e0;
-            border-bottom: 2px solid #4a00e0;
-            padding-bottom: 8px;
-        }
-        
-        .optional {
-            color: #777;
-            font-style: italic;
-            font-weight: normal;
-        }
-        
-        .camera-permission {
-            text-align: center;
-            padding: 20px;
-            background: #f9f9f9;
-            border-radius: 8px;
-            margin-bottom: 20px;
-        }
-        
-        .upload-section {
-            margin: 20px 0;
-            text-align: center;
-        }
-        
-        .upload-btn {
-            background: #ff9800;
-        }
-        
-        .upload-btn:hover {
-            background: #f57c00;
-        }
-        
-        .upload-preview {
-            max-width: 100%;
-            margin-top: 15px;
-            border-radius: 8px;
+        /* Toast Notification */
+        #toast {
             display: none;
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #333;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 4px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+            z-index: 1001;
         }
         
-        @media (max-width: 600px) {
+        /* Email Client Instructions */
+        .email-client-instructions {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            border-left: 4px solid #3498db;
+        }
+        
+        .email-client-instructions h3 {
+            margin-bottom: 10px;
+            color: #2c3e50;
+        }
+        
+        .email-client-instructions ul {
+            margin-left: 20px;
+            margin-bottom: 15px;
+        }
+        
+        .email-client-instructions li {
+            margin-bottom: 8px;
+        }
+        
+        /* Status indicators */
+        .status-loading {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 8px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* Responsive Design */
+        @media (max-width: 992px) {
+            .editor-area {
+                flex-direction: column;
+            }
+            
+            .property-editor {
+                width: 100%;
+                border-left: none;
+                border-top: 1px solid #e0e0e0;
+            }
+        }
+        
+        @media (max-width: 768px) {
             .container {
-                border-radius: 10px;
+                flex-direction: column;
             }
             
-            h1 {
-                font-size: 1.8rem;
+            .sidebar {
+                width: 100%;
+                order: 2;
             }
             
-            .tab {
-                padding: 12px;
-                font-size: 14px;
+            .variables-form {
+                grid-template-columns: 1fr;
             }
             
-            .tab-content {
-                padding: 20px;
+            .toolbar-buttons {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px;
+                justify-content: flex-end;
+            }
+            
+            .modal-content {
+                width: 95%;
+            }
+            
+            .export-options {
+                flex-direction: column;
             }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <header>
-            <h1>QR Code Generator & Scanner</h1>
-            <p class="description">Create and scan QR codes for various content types</p>
-        </header>
-        
-        <div class="tabs">
-            <div class="tab active" data-tab="generator">QR Generator</div>
-            <div class="tab" data-tab="scanner">QR Scanner</div>
+        <!-- Sidebar with components -->
+        <div class="sidebar">
+            <h2>Components</h2>
+            <div class="components-list">
+                <div class="component-item" draggable="true" data-type="header">
+                    <strong>Header</strong>
+                    <p>Email header with logo and navigation</p>
+                </div>
+                <div class="component-item" draggable="true" data-type="hero">
+                    <strong>Hero Section</strong>
+                    <p>Promotional banner area</p>
+                </div>
+                <div class="component-item" draggable="true" data-type="text">
+                    <strong>Text Block</strong>
+                    <p>Simple text content</p>
+                </div>
+                <div class="component-item" draggable="true" data-type="image">
+                    <strong>Image</strong>
+                    <p>Image with optional link</p>
+                </div>
+                <div class="component-item" draggable="true" data-type="button">
+                    <strong>Button</strong>
+                    <p>Call-to-action button</p>
+                </div>
+                <div class="component-item" draggable="true" data-type="footer">
+                    <strong>Footer</strong>
+                    <p>Email footer with contact info</p>
+                </div>
+            </div>
         </div>
         
-        <div class="tab-content active" id="generator">
-            <div class="input-group">
-                <label for="content-type">Content Type</label>
-                <select id="content-type">
-                    <option value="text">Text</option>
-                    <option value="url">URL</option>
-                    <option value="phone">Phone Number</option>
-                    <option value="email">Email</option>
-                    <option value="contact">Contact Details (vCard)</option>
-                </select>
+        <!-- Main content area -->
+        <div class="main-content">
+            <!-- Toolbar -->
+            <div class="toolbar">
+                <h1>Email Template Builder</h1>
+                <div class="toolbar-buttons">
+                    <button id="variables-btn" class="btn btn-secondary">Variables</button>
+                    <button id="preview-btn" class="btn btn-secondary">Preview</button>
+                    <button id="send-btn" class="btn btn-success">Send Email</button>
+                    <button id="export-btn" class="btn btn-primary">Export</button>
+                    <button id="instructions-btn" class="btn btn primary">Instructions</button>
+                </div>
             </div>
             
-            <div id="text-input" class="input-group">
-                <label for="text-content">Text Content</label>
-                <textarea id="text-content" placeholder="Enter text to encode"></textarea>
-            </div>
-            
-            <div id="url-input" class="input-group" style="display: none;">
-                <label for="url-content">Website URL</label>
-                <input type="url" id="url-content" placeholder="https://example.com">
-            </div>
-            
-            <div id="phone-input" class="input-group" style="display: none;">
-                <label for="phone-content">Phone Number</label>
-                <input type="tel" id="phone-content" placeholder="+1234567890">
-            </div>
-            
-            <div id="email-input" class="input-group" style="display: none;">
-                <label for="email-content">Email Address</label>
-                <input type="email" id="email-content" placeholder="example@mail.com">
-            </div>
-            
-            <div id="contact-input" style="display: none;">
-                <div class="contact-section">
-                    <h3>Personal Details</h3>
-                    <div class="input-group">
-                        <label for="name-content">Full Name <span class="optional">(Required)</span></label>
-                        <input type="text" id="name-content" placeholder="John Doe" required>
+            <!-- Editor area with canvas and property editor -->
+            <div class="editor-area">
+                <!-- Canvas where components are placed -->
+                <div class="canvas-container">
+                    <div class="canvas-header">
+                        <h2>Your Email Template</h2>
+                        <p>Drag components from the sidebar to build your email. Click "edit" to edit the properties of a component.</p>
                     </div>
-                    
-                    <div class="input-group">
-                        <label for="personal-phone">Personal Phone <span class="optional">(Required)</span></label>
-                        <input type="tel" id="personal-phone" placeholder="+1234567890" required>
-                    </div>
-                    
-                    <div class="input-group">
-                        <label for="personal-email">Personal Email <span class="optional">(Required)</span></label>
-                        <input type="email" id="personal-email" placeholder="john.doe@example.com" required>
-                    </div>
-                    
-                    <div class="input-group">
-                        <label for="address-street">Street Address <span class="optional">(Optional)</span></label>
-                        <input type="text" id="address-street" placeholder="123 Main St">
-                    </div>
-                    
-                    <div class="input-group">
-                        <label for="address-city">City <span class="optional">(Optional)</span></label>
-                        <input type="text" id="address-city" placeholder="New York">
-                    </div>
-                    
-                    <div class="input-group">
-                        <label for="address-state">State/Province <span class="optional">(Optional)</span></label>
-                        <input type="text" id="address-state" placeholder="NY">
-                    </div>
-                    
-                    <div class="input-group">
-                        <label for="address-zip">ZIP/Postal Code <span class="optional">(Optional)</span></label>
-                        <input type="text" id="address-zip" placeholder="10001">
-                    </div>
-                    
-                    <div class="input-group">
-                        <label for="address-country">Country <span class="optional">(Optional)</span></label>
-                        <input type="text" id="address-country" placeholder="USA">
+                    <div id="email-canvas">
+                        <div class="canvas-placeholder">
+                            <p>Drag components from the left panel to build your email template</p>
+                        </div>
                     </div>
                 </div>
                 
-                <div class="contact-section">
-                    <h3>Work Details <span class="optional">(Optional)</span></h3>
-                    <div class="input-group">
-                        <label for="company">Company</label>
-                        <input type="text" id="company" placeholder="ABC Corporation">
-                    </div>
-                    
-                    <div class="input-group">
-                        <label for="position">Position</label>
-                        <input type="text" id="position" placeholder="Software Developer">
-                    </div>
-                    
-                    <div class="input-group">
-                        <label for="department">Department</label>
-                        <input type="text" id="department" placeholder="Engineering">
-                    </div>
-                    
-                    <div class="input-group">
-                        <label for="work-phone">Work Phone</label>
-                        <input type="tel" id="work-phone" placeholder="+1234567890">
-                    </div>
-                    
-                    <div class="input-group">
-                        <label for="work-address">Work Address</label>
-                        <input type="text" id="work-address" placeholder="456 Business Ave">
-                    </div>
+                <!-- Property editor panel -->
+                <div class="property-editor" id="property-editor">
+                    <h2>Properties</h2>
+                    <p>Click "edit" on a component to edit its properties</p>
                 </div>
-            </div>
-            
-            <button id="generate-btn">Generate QR Code</button>
-            
-            <div class="qr-result">
-                <h3>Your QR Code</h3>
-                <div id="qrcode"></div>
-                <button id="download-btn" class="download-btn">Download QR Code</button>
-            </div>
-        </div>
-        
-        <div class="tab-content" id="scanner">
-            <div class="camera-permission">
-                <h3>Camera Access Required</h3>
-                <p>Please allow camera access to use the QR scanner. Make sure you're using HTTPS.</p>
-            </div>
-            
-            <div class="scanner-container">
-                <div id="scan-area">
-                    <video id="scan-video" width="100%" height="300" playsinline></video>
-                    <div class="scan-box"></div>
-                </div>
-                <button id="start-scan">Start Scanner</button>
-                <button id="stop-scan" style="display: none;">Stop Scanner</button>
-            </div>
-            
-            <div class="upload-section">
-                <h3>Or upload an image</h3>
-                <input type="file" id="upload-qr" accept="image/*" style="display: none;">
-                <button id="upload-btn" class="upload-btn">Upload QR Code Image</button>
-                <img id="upload-preview" class="upload-preview" alt="QR Code Preview">
-            </div>
-            
-            <div class="scan-result">
-                <h3>Scan Result</h3>
-                <div id="scan-output">No QR code detected yet...</div>
-                <button id="save-contact" style="display: none; background: #00c853;">Save Contact</button>
-                <button id="open-url" style="display: none; background: #2196f3;">Open URL</button>
             </div>
         </div>
     </div>
     
-    <div class="footer">
-        <p>QR Code Generator & Scanner App | Created with HTML, CSS & JavaScript</p>
+    <!-- Preview Modal -->
+    <div class="modal" id="preview-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Email Preview</h2>
+                <button class="close-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="preview-content"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary close-modal">Close</button>
+            </div>
+        </div>
     </div>
+    <!-- Instructions Modal --> 
+    <div class="modal" id="inst-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>How To</h2>
+                <button class="close-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <ul>
+                    <li>1. Drag a component from the left into the canvas</li>
+                    <li>2. Edit the component by clicking the blue "Edit" button on that component.</li>
+                    <li>3. Set variables by clicking the "Variables" button in the toolbar.</li>
+                    <li>4. Preview your email by clicking "Preview" in the toolbar</li>
+                    <li>5. Copy the HTML content by clicking "Export" in the toolbar.</li>
+                </ul>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary close-modal">Close</button>
+            </div>
+        </div>
+    </div>
+    <!-- Export Modal -->
+    <div class="modal" id="export-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Export Email Template</h2>
+                <button class="close-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="export-options">
+                    <button id="export-html" class="btn btn-primary">Generate HTML</button>
+                    <button id="export-copy" class="btn btn-secondary">Copy to Clipboard</button>
+                </div>
+                <div id="export-code-container">
+                    <div class="code-header">
+                        <h3>HTML Code:</h3>
+                        <button id="copy-html-btn" class="copy-btn">Copy HTML</button>
+                    </div>
+                    <pre id="export-code"></pre>
+                </div>
+                
+                <div class="email-client-instructions">
+                    <h3>How to use this HTML in email clients:</h3>
+                    <ul>
+                        <li><strong>Gmail:</strong> 
+                            <ol>
+                                <li>Click the "Copy HTML" button above</li>
+                                <li>Compose a new email in Gmail</li>
+                                <li>Right-click in the email body and select "Inspect"</li>
+                                <li>In the Developer Tools, find the div with contenteditable="true"</li>
+                                <li>Right-click on it and select "Edit as HTML"</li>
+                                <li>Paste your HTML code and click outside the box</li>
+                            </ol>
+                            Alternatively, use a browser extension like "HTML for Gmail"
+                        </li>
+                        <li><strong>Outlook:</strong> 
+                            <ol>
+                                <li>Click "New Email"</li>
+                                <li>Go to the "Insert" tab and click "Attach File"</li>
+                                <li>Insert your HTML file or paste the HTML code</li>
+                            </ol>
+                        </li>
+                        <li><strong>Other Clients:</strong> Most email clients allow you to paste HTML directly or import HTML files.</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary close-modal">Close</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Variables Modal -->
+    <div class="modal" id="variables-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Template Variables</h2>
+                <button class="close-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="variables-form">
+                    <div class="form-group">
+                        <label for="sender-name">Sender Name</label>
+                        <input type="text" id="sender-name" placeholder="e.g., John Smith">
+                    </div>
+                    <div class="form-group">
+                        <label for="sender-email">Sender Email</label>
+                        <input type="text" id="sender-email" placeholder="e.g., john@example.com">
+                    </div>
+                    <div class="form-group">
+                        <label for="recipient-name">Recipient Name</label>
+                        <input type="text" id="recipient-name" placeholder="e.g., Jane Doe">
+                    </div>
+                    <div class="form-group">
+                        <label for="recipient-email">Recipient Email</label>
+                        <input type="text" id="recipient-email" placeholder="e.g., jane@example.com">
+                    </div>
+                    <div class="form-group">
+                        <label for="send-date">Send Date</label>
+                        <input type="date" id="send-date">
+                    </div>
+                    <div class="form-group">
+                        <label for="company-name">Company Name</label>
+                        <input type="text" id="company-name" placeholder="John Doe and Sons">
+                    </div>
+                </div>
+                <div class="variable-info" style="margin-top: 20px; padding: 15px; background-color: #f8f9fa; border-radius: 5px;">
+                    <h3>How to Use Variables</h3>
+                    <p>Use these placeholders in your content:</p>
+                    <ul style="margin-top: 10px; margin-left: 20px;">
+                        <li><strong>{sName}</strong> - Sender Name</li>
+                        <li><strong>{sEmail}</strong> - Sender Email</li>
+                        <li><strong>{rName}</strong> - Recipient Name</li>
+                        <li><strong>{rEmail}</strong> - Recipient Email</li>
+                        <li><strong>{sDate}</strong> - Send Date</li>
+                        <li><strong>{cName}</strong> - Company Name</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="save-variables" class="btn btn-primary">Save Variables</button>
+                <button class="btn btn-secondary close-modal">Cancel</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Send Email Modal -->
+    <div class="modal" id="send-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Send Email</h2>
+                <button class="close-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="send-email-form">
+                    <div class="form-group">
+                        <label for="send-to">To</label>
+                        <input type="email" id="send-to" placeholder="recipient@example.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="send-subject">Subject</label>
+                        <input type="text" id="send-subject" placeholder="Email subject" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="send-from-name">From Name</label>
+                        <input type="text" id="send-from-name" placeholder="Your Name">
+                    </div>
+                </div>
+                <div id="send-status" style="margin-top: 15px; padding: 10px; display: none;"></div>
+            </div>
+            <div class="modal-footer">
+                <button id="send-email-btn" class="btn btn-success">Send Now</button>
+                <button class="btn btn-secondary close-modal">Cancel</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Toast Notification -->
+    <div id="toast"></div>
 
     <script>
-        // URL Routing functionality
-        function updateUrlForTab(tabName) {
-            const path = tabName === 'generator' ? '/gen' : '/scan';
-            // Use history API to update URL without page reload
-            window.history.pushState(null, null, path);
+        // Initialize EmailJS with your public key
+        // Replace 'YOUR_PUBLIC_KEY' with your actual EmailJS public key
+        emailjs.init("FNNCmBtDRxLL0AE5S");
+        
+        // DOM Elements
+        const emailCanvas = document.getElementById('email-canvas');
+        const propertyEditor = document.getElementById('property-editor');
+        const previewModal = document.getElementById('preview-modal');
+        const exportModal = document.getElementById('export-modal');
+        const variablesModal = document.getElementById('variables-modal');
+        const sendModal = document.getElementById('send-modal');
+        const instModal = document.getElementById('inst-modal');
+        const previewContent = document.getElementById('preview-content');
+        const exportCode = document.getElementById('export-code');
+        const exportCodeContainer = document.getElementById('export-code-container');
+        const toast = document.getElementById('toast');
+        const sendStatus = document.getElementById('send-status');
+        
+        // Buttons
+        const previewBtn = document.getElementById('preview-btn');
+        const exportBtn = document.getElementById('export-btn');
+        const sendBtn = document.getElementById('send-btn');
+        const variablesBtn = document.getElementById('variables-btn');
+        const saveVariablesBtn = document.getElementById('save-variables');
+        const sendEmailBtn = document.getElementById('send-email-btn');
+        const copyHtmlBtn = document.getElementById('copy-html-btn');
+        const instBtn = document.getElementById('instructions-btn');
+        
+        // Variable Inputs
+        const senderNameInput = document.getElementById('sender-name');
+        const senderEmailInput = document.getElementById('sender-email');
+        const recipientNameInput = document.getElementById('recipient-name');
+        const recipientEmailInput = document.getElementById('recipient-email');
+        const sendDateInput = document.getElementById('send-date');
+        const companyNameInput = document.getElementById('company-name');
+        
+        // Send Email Inputs
+        const sendToInput = document.getElementById('send-to');
+        const sendSubjectInput = document.getElementById('send-subject');
+        const sendFromNameInput = document.getElementById('send-from-name');
+        
+        // Close modal buttons
+        const closeModalButtons = document.querySelectorAll('.close-modal');
+        
+        // Store components and variables
+        let components = [];
+        let variables = {
+            senderName: '',
+            senderEmail: '',
+            recipientName: '',
+            recipientEmail: '',
+            sendDate: '',
+            companyName: ''
+        };
+        
+        // Variable mapping
+        const variableMap = {
+            '{sName}': 'senderName',
+            '{sEmail}': 'senderEmail',
+            '{rName}': 'recipientName',
+            '{rEmail}': 'recipientEmail',
+            '{sDate}': 'sendDate',
+            '{cName}': 'companyName'
+        };
+        
+        // Currently selected component for editing
+        let currentlyEditingComponent = null;
+        
+        // Initialize the application
+        function init() {
+            // Set today's date as default for send date
+            const today = new Date().toISOString().split('T')[0];
+            sendDateInput.value = today;
+            variables.sendDate = today;
+            
+            // Load saved variables from localStorage if available
+            loadSavedVariables();
+            
+            // Set up event listeners
+            setupEventListeners();
+            
+            // Initialize the canvas
+            checkEmptyCanvas();
         }
         
-        function getTabFromUrl() {
-            const path = window.location.pathname;
-            if (path === '/scan') return 'scanner';
-            return 'generator'; // Default to generator
-        }
-        
-        // Initialize tab based on URL
-        function initializeTabFromUrl() {
-            const targetTab = getTabFromUrl();
-            switchTab(targetTab);
-        }
-        
-        // Switch to a specific tab
-        function switchTab(tabName) {
-            // Remove active class from all tabs and content
-            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-            
-            // Add active class to target tab and corresponding content
-            document.querySelector(`.tab[data-tab="${tabName}"]`).classList.add('active');
-            document.getElementById(tabName).classList.add('active');
-            
-            // Update URL
-            updateUrlForTab(tabName);
-            
-            // If switching to scanner, stop any active generator processes
-            if (tabName === 'scanner') {
-                if (stream) {
-                    stopScanner();
-                }
-            }
-        }
-        
-        // Tab switching functionality
-        document.querySelectorAll('.tab').forEach(tab => {
-            tab.addEventListener('click', () => {
-                switchTab(tab.dataset.tab);
-            });
-        });
-        
-        // Handle browser back/forward buttons
-        window.addEventListener('popstate', () => {
-            initializeTabFromUrl();
-        });
-        
-        // Initialize on page load
-        initializeTabFromUrl();
-        
-        // Content type switching for generator
-        const contentType = document.getElementById('content-type');
-        const textInput = document.getElementById('text-input');
-        const urlInput = document.getElementById('url-input');
-        const phoneInput = document.getElementById('phone-input');
-        const emailInput = document.getElementById('email-input');
-        const contactInput = document.getElementById('contact-input');
-        
-        contentType.addEventListener('change', () => {
-            // Hide all input groups
-            textInput.style.display = 'none';
-            urlInput.style.display = 'none';
-            phoneInput.style.display = 'none';
-            emailInput.style.display = 'none';
-            contactInput.style.display = 'none';
-            
-            // Show selected input group
-            switch(contentType.value) {
-                case 'text':
-                    textInput.style.display = 'block';
-                    break;
-                case 'url':
-                    urlInput.style.display = 'block';
-                    break;
-                case 'phone':
-                    phoneInput.style.display = 'block';
-                    break;
-                case 'email':
-                    emailInput.style.display = 'block';
-                    break;
-                case 'contact':
-                    contactInput.style.display = 'block';
-                    break;
-            }
-        });
-        
-        // QR Code Generation - Fixed implementation
-        const generateBtn = document.getElementById('generate-btn');
-        const qrcodeDiv = document.getElementById('qrcode');
-        const downloadBtn = document.getElementById('download-btn');
-        
-        generateBtn.addEventListener('click', () => {
-            let qrData = '';
-            
-            switch(contentType.value) {
-                case 'text':
-                    qrData = document.getElementById('text-content').value;
-                    break;
-                case 'url':
-                    let url = document.getElementById('url-content').value;
-                    qrData = url.startsWith('http') ? url : 'https://' + url;
-                    break;
-                case 'phone':
-                    qrData = 'tel:' + document.getElementById('phone-content').value;
-                    break;
-                case 'email':
-                    qrData = 'mailto:' + document.getElementById('email-content').value;
-                    break;
-                case 'contact':
-                    const name = document.getElementById('name-content').value;
-                    const personalPhone = document.getElementById('personal-phone').value;
-                    const personalEmail = document.getElementById('personal-email').value;
-                    const street = document.getElementById('address-street').value;
-                    const city = document.getElementById('address-city').value;
-                    const state = document.getElementById('address-state').value;
-                    const zip = document.getElementById('address-zip').value;
-                    const country = document.getElementById('address-country').value;
-                    const company = document.getElementById('company').value;
-                    const position = document.getElementById('position').value;
-                    const department = document.getElementById('department').value;
-                    const workPhone = document.getElementById('work-phone').value;
-                    const workAddress = document.getElementById('work-address').value;
-                    
-                    // Validate required fields
-                    if (!name || !personalPhone || !personalEmail) {
-                        alert('Please fill in all required contact fields: Name, Personal Phone, and Personal Email');
-                        return;
-                    }
-                    
-                    // Build vCard content with proper formatting
-                    qrData = `BEGIN:VCARD
-VERSION:3.0
-N:${name}
-FN:${name}
-TEL;TYPE=CELL,VOICE:${personalPhone}
-EMAIL:${personalEmail}`;
-
-                    // Add optional personal address fields if provided
-                    if (street || city || state || zip || country) {
-                        qrData += `\nADR:;;${street};${city};${state};${zip};${country}`;
-                        qrData += `\nLABEL:${street}, ${city}, ${state} ${zip}, ${country}`;
-                    }
-                    
-                    // Add work details if provided
-                    if (company) qrData += `\nORG:${company}`;
-                    if (position) qrData += `\nTITLE:${position}`;
-                    if (workPhone) qrData += `\nTEL;TYPE=WORK,VOICE:${workPhone}`;
-                    if (workAddress) qrData += `\nADR;TYPE=WORK:;;${workAddress};;;`;
-                    
-                    qrData += '\nEND:VCARD';
-                    break;
-            }
-            
-            if (qrData) {
-                // Clear previous QR code
-                qrcodeDiv.innerHTML = '';
+        // Load saved variables from localStorage
+        function loadSavedVariables() {
+            const savedVariables = localStorage.getItem('emailTemplateVariables');
+            if (savedVariables) {
+                const parsedVariables = JSON.parse(savedVariables);
+                variables = {...variables, ...parsedVariables};
                 
-                // Generate new QR code - Fixed implementation
-                try {
-                    // Create a canvas element
-                    const canvas = document.createElement('canvas');
-                    
-                    // Generate QR code to the canvas
-                    QRCode.toCanvas(canvas, qrData, {
-                        width: 200,
-                        margin: 1,
-                        color: {
-                            dark: '#000000',
-                            light: '#ffffff'
-                        }
-                    }, function(error) {
-                        if (error) {
-                            console.error('QR Code generation error:', error);
-                            alert('Error generating QR code: ' + error.message);
-                        } else {
-                            // Add the canvas to the DOM
-                            qrcodeDiv.appendChild(canvas);
-                        }
-                    });
-                } catch (error) {
-                    console.error('QR Code generation error:', error);
-                    alert('Error generating QR code: ' + error.message);
-                }
-            } else {
-                alert('Please enter content to generate QR code');
+                // Update input fields
+                senderNameInput.value = variables.senderName || '';
+                senderEmailInput.value = variables.senderEmail || '';
+                recipientNameInput.value = variables.recipientName || '';
+                recipientEmailInput.value = variables.recipientEmail || '';
+                sendDateInput.value = variables.sendDate || new Date().toISOString().split('T')[0];
+                companyNameInput.value = variables.companyName || '';
+                
+                // Pre-fill send form with saved variables
+                sendToInput.value = variables.recipientEmail || '';
+                sendFromNameInput.value = variables.senderName || '';
             }
-        });
-        
-        downloadBtn.addEventListener('click', () => {
-            const canvas = qrcodeDiv.querySelector('canvas');
-            if (canvas) {
-                const link = document.createElement('a');
-                link.download = 'qrcode.png';
-                link.href = canvas.toDataURL('image/png');
-                link.click();
-            } else {
-                alert('Please generate a QR code first');
-            }
-        });
-        
-        // QR Code Scanning - Fixed implementation
-        const startScanBtn = document.getElementById('start-scan');
-        const stopScanBtn = document.getElementById('stop-scan');
-        const scanVideo = document.getElementById('scan-video');
-        const scanOutput = document.getElementById('scan-output');
-        const uploadBtn = document.getElementById('upload-btn');
-        const uploadInput = document.getElementById('upload-qr');
-        const uploadPreview = document.getElementById('upload-preview');
-        const saveContactBtn = document.getElementById('save-contact');
-        const openUrlBtn = document.getElementById('open-url');
-        
-        let stream = null;
-        let scanningInterval = null;
-        let lastScannedData = '';
-        
-        // Function to stop the scanner
-        function stopScanner() {
-            if (stream) {
-                stream.getTracks().forEach(track => track.stop());
-                stream = null;
-            }
-            if (scanningInterval) {
-                clearInterval(scanningInterval);
-                scanningInterval = null;
-            }
-            startScanBtn.style.display = 'block';
-            stopScanBtn.style.display = 'none';
-            scanOutput.textContent = 'No QR code detected yet...';
-            scanVideo.srcObject = null;
         }
         
-        // Function to start the scanner
-        async function startScanner() {
-            try {
-                stream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { facingMode: "environment" } 
+        // Set up all event listeners
+        function setupEventListeners() {
+            // Drag and drop for components
+            setupDragAndDrop();
+            
+            // Modal buttons
+            previewBtn.addEventListener('click', showPreview);
+            exportBtn.addEventListener('click', showExportModal);
+            sendBtn.addEventListener('click', showSendModal);
+            variablesBtn.addEventListener('click', showVariablesModal);
+            saveVariablesBtn.addEventListener('click', saveVariables);
+            sendEmailBtn.addEventListener('click', sendEmail);
+            copyHtmlBtn.addEventListener('click', copyHtmlToClipboard);
+            instBtn.addEventListener('click', showInstModal);
+            
+            // Close modals
+            closeModalButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    previewModal.style.display = 'none';
+                    exportModal.style.display = 'none';
+                    variablesModal.style.display = 'none';
+                    sendModal.style.display = 'none';
+                    instModal.style.display = 'none';
                 });
-                scanVideo.srcObject = stream;
-                startScanBtn.style.display = 'none';
-                stopScanBtn.style.display = 'block';
+            });
+            
+            // Export options
+            document.getElementById('export-html').addEventListener('click', exportAsHTML);
+            document.getElementById('export-copy').addEventListener('click', copyToClipboard);
+            
+            // Close modals when clicking outside
+            window.addEventListener('click', (e) => {
+                if (e.target === previewModal) previewModal.style.display = 'none';
+                if (e.target === exportModal) exportModal.style.display = 'none';
+                if (e.target === variablesModal) variablesModal.style.display = 'none';
+                if (e.target === sendModal) sendModal.style.display = 'none';
+                if (e.target === instModal) instModal.style.display = 'none';
+            });
+        }
+        
+        // Set up drag and drop functionality
+        function setupDragAndDrop() {
+            const componentItems = document.querySelectorAll('.component-item[draggable="true"]');
+            
+            componentItems.forEach(item => {
+                item.addEventListener('dragstart', (e) => {
+                    e.dataTransfer.setData('text/plain', item.dataset.type);
+                });
+            });
+            
+            emailCanvas.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                emailCanvas.classList.add('drag-over');
+            });
+            
+            emailCanvas.addEventListener('dragleave', () => {
+                emailCanvas.classList.remove('drag-over');
+            });
+            
+            emailCanvas.addEventListener('drop', (e) => {
+                e.preventDefault();
+                emailCanvas.classList.remove('drag-over');
                 
-                // Wait for video to load metadata
-                scanVideo.onloadedmetadata = () => {
-                    scanVideo.play();
-                    
-                    // Create a canvas for QR code detection
-                    const canvasElement = document.createElement('canvas');
-                    const canvasContext = canvasElement.getContext('2d');
-                    
-                    // Start scanning for QR codes
-                    scanningInterval = setInterval(() => {
-                        if (scanVideo.readyState === scanVideo.HAVE_ENOUGH_DATA) {
-                            // Set canvas dimensions to match video
-                            canvasElement.width = scanVideo.videoWidth;
-                            canvasElement.height = scanVideo.videoHeight;
-                            
-                            // Draw video frame to canvas
-                            canvasContext.drawImage(scanVideo, 0, 0, canvasElement.width, canvasElement.height);
-                            
-                            // Get image data from canvas
-                            const imageData = canvasContext.getImageData(0, 0, canvasElement.width, canvasElement.height);
-                            
-                            // Try to detect QR code
-                            const code = jsQR(imageData.data, imageData.width, imageData.height, {
-                                inversionAttempts: "dontInvert",
-                            });
-                            
-                            if (code) {
-                                processScannedData(code.data);
-                            }
-                        }
-                    }, 100); // Check every 100ms
-                };
-            } catch (err) {
-                console.error('Error accessing camera:', err);
-                alert('Unable to access camera. Please check permissions and make sure you are using HTTPS.');
-            }
+                const componentType = e.dataTransfer.getData('text/plain');
+                addComponentToCanvas(componentType);
+            });
         }
         
-        // Function to process scanned data
-        function processScannedData(data) {
-            lastScannedData = data;
-            
-            // Check if it's a vCard
-            if (data.startsWith('BEGIN:VCARD')) {
-                scanOutput.innerHTML = `
-                    <p><strong>Contact Detected:</strong></p>
-                    <div class="contact-details">${extractContactInfo(data)}</div>
-                `;
-                saveContactBtn.style.display = 'block';
-                openUrlBtn.style.display = 'none';
-            } 
-            // Check if it's a URL
-            else if (data.startsWith('http://') || data.startsWith('https://') || 
-                     data.startsWith('www.') || data.startsWith('mailto:') || 
-                     data.startsWith('tel:')) {
-                scanOutput.innerHTML = `
-                    <p><strong>Link Detected:</strong></p>
-                    <p><a href="${data}" target="_blank">${data}</a></p>
-                `;
-                saveContactBtn.style.display = 'none';
-                openUrlBtn.style.display = 'block';
-            } 
-            // Regular text
-            else {
-                scanOutput.innerHTML = `
-                    <p><strong>Text Detected:</strong></p>
-                    <p>${data}</p>
-                `;
-                saveContactBtn.style.display = 'none';
-                openUrlBtn.style.display = 'none';
+        // Add a component to the canvas
+        function addComponentToCanvas(type) {
+            // Remove the placeholder if it exists
+            const placeholder = emailCanvas.querySelector('.canvas-placeholder');
+            if (placeholder) {
+                placeholder.remove();
             }
-        }
-        
-        // Function to extract contact info from vCard
-        function extractContactInfo(vcard) {
-            const lines = vcard.split('\n');
-            let contactInfo = '';
             
-            for (const line of lines) {
-                if (line.startsWith('FN:') || line.startsWith('N:')) {
-                    const name = line.split(':')[1] || '';
-                    if (name) contactInfo += `<p><strong>Name:</strong> ${name}</p>`;
-                } else if (line.startsWith('TEL')) {
-                    const phone = line.split(':')[1] || '';
-                    if (phone) contactInfo += `<p><strong>Phone:</strong> ${phone}</p>`;
-                } else if (line.startsWith('EMAIL')) {
-                    const email = line.split(':')[1] || '';
-                    if (email) contactInfo += `<p><strong>Email:</strong> ${email}</p>`;
-                } else if (line.startsWith('ADR')) {
-                    const address = line.split(':')[1] || '';
-                    if (address && !address.startsWith(';;')) {
-                        // Format address by replacing semicolons with commas
-                        const formattedAddress = address.split(';').filter(part => part).join(', ');
-                        contactInfo += `<p><strong>Address:</strong> ${formattedAddress}</p>`;
-                    }
-                } else if (line.startsWith('ORG:')) {
-                    const company = line.split(':')[1] || '';
-                    if (company) contactInfo += `<p><strong>Company:</strong> ${company}</p>`;
-                } else if (line.startsWith('TITLE:')) {
-                    const title = line.split(':')[1] || '';
-                    if (title) contactInfo += `<p><strong>Title:</strong> ${title}</p>`;
-                } else if (line.startsWith('NOTE:')) {
-                    const note = line.split(':')[1] || '';
-                    if (note) contactInfo += `<p><strong>Note:</strong> ${note}</p>`;
+            let componentHtml = '';
+            let defaultContent = '';
+            
+            switch (type) {
+                case 'header':
+                    defaultContent = '<div style="text-align: center; padding: 20px; background-color: #f8f9fa;"><h1>Email Header</h1><p>{cName}</p></div>';
+                    break;
+                case 'hero':
+                    defaultContent = '<div style="text-align: center; padding: 40px; background-color: #e9ecef;"><h2>Hero Section</h2><p>Engaging content goes here</p><p>Use variables like {rName} to personalize</p></div>';
+                    break;
+                case 'text':
+                    defaultContent = '<p>This is a text block from {cName}. You can edit this content to add your own text. Use variables like {rName} to personalize your message.</p>';
+                    break;
+                case 'image':
+                    defaultContent = '<img src="https://via.placeholder.com/600x300" alt="Placeholder Image" style="max-width: 100%; height: auto;">';
+                    break;
+                case 'button':
+                    defaultContent = '<div style="text-align: center; margin: 20px 0;"><a href="#" style="display: inline-block; padding: 12px 24px; background-color: #6e8efb; color: white; text-decoration: none; border-radius: 4px;">Click Me</a></div>';
+                    break;
+                case 'footer':
+                    defaultContent = '<div style="text-align: center; padding: 20px; background-color: #f5f5f5; margin-top: 20px;"><p>&copy; 2023 {cName}. All rights reserved.</p><p>Contact: {sEmail}</p></div>';
+                    break;
+            }
+            
+            componentHtml = `
+                <div class="component-content">${defaultContent}</div>
+                <div class="component-tools">
+                    <button class="edit-btn">Edit</button>
+                    <button class="delete-btn">Delete</button>
+                </div>
+            `;
+            
+            const componentElement = document.createElement('div');
+            componentElement.className = 'email-component';
+            componentElement.setAttribute('data-type', type);
+            componentElement.innerHTML = componentHtml;
+            
+            // Add event listeners for the tools
+            const editBtn = componentElement.querySelector('.edit-btn');
+            const deleteBtn = componentElement.querySelector('.delete-btn');
+            
+            editBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                showPropertyEditor(componentElement, type);
+            });
+            
+            deleteBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                componentElement.remove();
+                updateComponentsArray();
+                checkEmptyCanvas();
+            });
+            
+            // Also make the whole component clickable for editing
+            componentElement.addEventListener('click', (e) => {
+                if (e.target === componentElement || e.target.classList.contains('component-content')) {
+                    showPropertyEditor(componentElement, type);
                 }
+            });
+            
+            emailCanvas.appendChild(componentElement);
+            updateComponentsArray();
+        }
+        
+        // Show property editor for a component
+        function showPropertyEditor(component, type) {
+            currentlyEditingComponent = component;
+            let editorHtml = '';
+            
+            switch (type) {
+                case 'text':
+                    const currentText = component.querySelector('.component-content').innerHTML;
+                    editorHtml = `
+                        <div class="property-group">
+                            <h3>Text Content</h3>
+                            <div class="form-group">
+                                <label for="text-content">Text Content</label>
+                                <textarea id="text-content" rows="6" placeholder="Enter your text here">${currentText}</textarea>
+                            </div>
+                            <div class="variable-palette">
+                                <span class="variable-chip" data-var="{rName}">Recipient Name</span>
+                                <span class="variable-chip" data-var="{sName}">Sender Name</span>
+                                <span class="variable-chip" data-var="{sEmail}">Sender Email</span>
+                                <span class="variable-chip" data-var="{rEmail}">Recipient Email</span>
+                                <span class="variable-chip" data-var="{sDate}">Send Date</span>
+                                <span class="variable-chip" data-var="{cName}">Company Name</span>
+                            </div>
+                            <button class="btn btn-primary" id="save-text">Save Changes</button>
+                        </div>
+                    `;
+                    break;
+                case 'image':
+                    const currentSrc = component.querySelector('img')?.src || '';
+                    const currentAlt = component.querySelector('img')?.alt || '';
+                    const currentLink = component.querySelector('a')?.href || '';
+                    editorHtml = `
+                        <div class="property-group">
+                            <h3>Image Properties</h3>
+                            <div class="form-group">
+                                <label for="image-src">Image URL</label>
+                                <input type="text" id="image-src" value="${currentSrc}" placeholder="https://example.com/image.jpg">
+                            </div>
+                            <div class="form-group">
+                                <label for="image-alt">Alt Text</label>
+                                <input type="text" id="image-alt" value="${currentAlt}" placeholder="Description of image">
+                            </div>
+                            <div class="form-group">
+                                <label for="image-link">Link URL (optional)</label>
+                                <input type="text" id="image-link" value="${currentLink}" placeholder="https://example.com">
+                            </div>
+                            <button class="btn btn-primary" id="save-image">Save Changes</button>
+                        </div>
+                    `;
+                    break;
+                case 'button':
+                    const currentButton = component.querySelector('a');
+                    editorHtml = `
+                        <div class="property-group">
+                            <h3>Button Properties</h3>
+                            <div class="form-group">
+                                <label for="button-text">Button Text</label>
+                                <input type="text" id="button-text" value="${currentButton.textContent}" placeholder="Button Text">
+                            </div>
+                            <div class="form-group">
+                                <label for="button-link">Button Link</label>
+                                <input type="text" id="button-link" value="${currentButton.href}" placeholder="https://example.com">
+                            </div>
+                            <div class="form-group">
+                                <label for="button-color">Button Color</label>
+                                <input type="color" id="button-color" value="${currentButton.style.backgroundColor || '#6e8efb'}">
+                            </div>
+                            <button class="btn btn-primary" id="save-button">Save Changes</button>
+                        </div>
+                    `;
+                    break;
+                case 'header':
+                    const headerContent = component.querySelector('.component-content');
+                    const headerTitle = headerContent.querySelector('h1')?.textContent || 'Email Header';
+                    const headerSubtitle = headerContent.querySelector('p')?.textContent || '{cName}';
+                    editorHtml = `
+                        <div class="property-group">
+                            <h3>Header Properties</h3>
+                            <div class="form-group">
+                                <label for="header-title">Header Title</label>
+                                <input type="text" id="header-title" value="${headerTitle}" placeholder="Header Title">
+                            </div>
+                            <div class="form-group">
+                                <label for="header-subtitle">Header Subtitle</label>
+                                <input type="text" id="header-subtitle" value="${headerSubtitle}" placeholder="Header Subtitle">
+                            </div>
+                            <div class="variable-palette">
+                                <span class="variable-chip" data-var="{rName}">Recipient Name</span>
+                                <span class="variable-chip" data-var="{sName}">Sender Name</span>
+                                <span class="variable-chip" data-var="{sEmail}">Sender Email</span>
+                                <span class="variable-chip" data-var="{cName}">Company Name</span>
+                            </div>
+                            <button class="btn btn-primary" id="save-header">Save Changes</button>
+                        </div>
+                    `;
+                    break;
+                case 'hero':
+                    const heroContent = component.querySelector('.component-content');
+                    const heroTitle = heroContent.querySelector('h2')?.textContent || 'Hero Section';
+                    const heroText = heroContent.querySelector('p')?.textContent || 'Engaging content goes here';
+                    editorHtml = `
+                        <div class="property-group">
+                            <h3>Hero Section Properties</h3>
+                            <div class="form-group">
+                                <label for="hero-title">Hero Title</label>
+                                <input type="text" id="hero-title" value="${heroTitle}" placeholder="Hero Title">
+                            </div>
+                            <div class="form-group">
+                                <label for="hero-text">Hero Text</label>
+                                <textarea id="hero-text" rows="3" placeholder="Hero text content">${heroText}</textarea>
+                            </div>
+                            <div class="variable-palette">
+                                <span class="variable-chip" data-var="{rName}">Recipient Name</span>
+                                <span class="variable-chip" data-var="{sName}">Sender Name</span>
+                                <span class="variable-chip" data-var="{sDate}">Send Date</span>
+                                <span class="variable-chip" data-var="{cName}">Company Name</span>
+                            </div>
+                            <button class="btn btn-primary" id="save-hero">Save Changes</button>
+                        </div>
+                    `;
+                    break;
+                case 'footer':
+                    const footerContent = component.querySelector('.component-content');
+                    const footerText = footerContent.querySelector('p')?.textContent || '© 2023 {cName}. All rights reserved.';
+                    const footerContact = footerContent.querySelectorAll('p')[1]?.textContent.replace('Contact: ', '') || '';
+                    editorHtml = `
+                        <div class="property-group">
+                            <h3>Footer Properties</h3>
+                            <div class="form-group">
+                                <label for="footer-text">Footer Text</label>
+                                <input type="text" id="footer-text" value="${footerText}" placeholder="Footer text">
+                            </div>
+                            <div class="form-group">
+                                <label for="footer-contact">Contact Info</label>
+                                <input type="text" id="footer-contact" value="${footerContact}" placeholder="Contact information">
+                            </div>
+                            <div class="variable-palette">
+                                <span class="variable-chip" data-var="{sEmail}">Sender Email</span>
+                                <span class="variable-chip" data-var="{sName}">Sender Name</span>
+                                <span class="variable-chip" data-var="{sDate}">Send Date</span>
+                                <span class="variable-chip" data-var="{cName}">Company Name</span>
+                            </div>
+                            <button class="btn btn-primary" id="save-footer">Save Changes</button>
+                        </div>
+                    `;
+                    break;
+                default:
+                    editorHtml = `<p>No properties to edit for this component.</p>`;
             }
             
-            return contactInfo || '<p>No contact information found</p>';
-        }
-        
-        // Function to save contact from vCard
-        function saveContactFromVCard(vcard) {
-            // Create a blob with the vCard data
-            const blob = new Blob([vcard], { type: 'text/vcard' });
-            const url = URL.createObjectURL(blob);
+            propertyEditor.innerHTML = editorHtml;
             
-            // Create a download link
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = 'contact.vcf';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        }
-        
-        // Upload QR code image functionality
-        uploadBtn.addEventListener('click', () => {
-            uploadInput.click();
-        });
-        
-        uploadInput.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(event) {
-                    uploadPreview.src = event.target.result;
-                    uploadPreview.style.display = 'block';
+            // Add event listeners to variable chips
+            const variableChips = propertyEditor.querySelectorAll('.variable-chip');
+            variableChips.forEach(chip => {
+                chip.addEventListener('click', () => {
+                    const variable = chip.getAttribute('data-var');
+                    insertVariableAtCursor(variable);
+                });
+            });
+            
+            // Set up save handlers based on component type
+            if (type === 'text') {
+                document.getElementById('save-text').addEventListener('click', () => {
+                    const newContent = document.getElementById('text-content').value;
+                    // Preserve newlines by replacing them with <br> tags
+                    const formattedContent = newContent.replace(/\n/g, '<br>');
+                    component.querySelector('.component-content').innerHTML = formattedContent;
+                    updateComponentsArray();
+                    showToast('Text updated successfully!');
+                });
+            } else if (type === 'image') {
+                document.getElementById('save-image').addEventListener('click', () => {
+                    const src = document.getElementById('image-src').value;
+                    const alt = document.getElementById('image-alt').value;
+                    const link = document.getElementById('image-link').value;
                     
-                    // Create an image element to process
-                    const img = new Image();
-                    img.onload = function() {
-                        // Create a canvas to draw the image
-                        const canvas = document.createElement('canvas');
-                        const ctx = canvas.getContext('2d');
-                        canvas.width = img.width;
-                        canvas.height = img.height;
-                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                        
-                        // Get image data
-                        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                        
-                        // Try to detect QR code
-                        const code = jsQR(imageData.data, imageData.width, imageData.height, {
-                            inversionAttempts: "dontInvert",
-                        });
-                        
-                        if (code) {
-                            processScannedData(code.data);
-                        } else {
-                            scanOutput.innerHTML = '<p>No QR code found in the image.</p>';
-                            saveContactBtn.style.display = 'none';
-                            openUrlBtn.style.display = 'none';
+                    let imageHtml = `<img src="${src}" alt="${alt}" style="max-width: 100%; height: auto;">`;
+                    
+                    if (link) {
+                        imageHtml = `<a href="${link}">${imageHtml}</a>`;
+                    }
+                    
+                    component.querySelector('.component-content').innerHTML = imageHtml;
+                    updateComponentsArray();
+                    showToast('Image updated successfully!');
+                });
+            } else if (type === 'button') {
+                document.getElementById('save-button').addEventListener('click', () => {
+                    const text = document.getElementById('button-text').value;
+                    const link = document.getElementById('button-link').value;
+                    const color = document.getElementById('button-color').value;
+                    
+                    const buttonHtml = `
+                        <a href="${link}" style="display: inline-block; padding: 12px 24px; background-color: ${color}; color: white; text-decoration: none; border-radius: 4px;">${text}</a>
+                    `;
+                    
+                    component.querySelector('.component-content').innerHTML = buttonHtml;
+                    updateComponentsArray();
+                    showToast('Button updated successfully!');
+                });
+            } else if (type === 'header') {
+                document.getElementById('save-header').addEventListener('click', () => {
+                    const title = document.getElementById('header-title').value;
+                    const subtitle = document.getElementById('header-subtitle').value;
+                    
+                    const headerHtml = `
+                        <div style="text-align: center; padding: 20px; background-color: #f8f9fa;">
+                            <h1>${title}</h1>
+                            <p>${subtitle}</p>
+                        </div>
+                    `;
+                    
+                    component.querySelector('.component-content').innerHTML = headerHtml;
+                    updateComponentsArray();
+                    showToast('Header updated successfully!');
+                });
+            } else if (type === 'hero') {
+                document.getElementById('save-hero').addEventListener('click', () => {
+                    const title = document.getElementById('hero-title').value;
+                    const text = document.getElementById('hero-text').value;
+                    
+                    const heroHtml = `
+                        <div style="text-align: center; padding: 40px; background-color: #e9ecef;">
+                            <h2>${title}</h2>
+                            <p>${text}</p>
+                        </div>
+                    `;
+                    
+                    component.querySelector('.component-content').innerHTML = heroHtml;
+                    updateComponentsArray();
+                    showToast('Hero section updated successfully!');
+                });
+            } else if (type === 'footer') {
+                document.getElementById('save-footer').addEventListener('click', () => {
+                    const text = document.getElementById('footer-text').value;
+                    const contact = document.getElementById('footer-contact').value;
+                    
+                    const footerHtml = `
+                        <div style="text-align: center; padding: 20px; background-color: #f5f5f5; margin-top: 20px;">
+                            <p>${text}</p>
+                            ${contact ? `<p>Contact: ${contact}</p>` : ''}
+                        </div>
+                    `;
+                    
+                    component.querySelector('.component-content').innerHTML = footerHtml;
+                    updateComponentsArray();
+                    showToast('Footer updated successfully!');
+                });
+            }
+        }
+        
+        // Insert variable at cursor position in textarea
+        function insertVariableAtCursor(variable) {
+            const textarea = propertyEditor.querySelector('textarea');
+            if (!textarea) return;
+            
+            const cursorPosition = textarea.selectionStart;
+            const currentValue = textarea.value;
+            
+            // Insert the variable at cursor position
+            textarea.value = currentValue.substring(0, cursorPosition) + 
+                             variable + 
+                             currentValue.substring(cursorPosition);
+            
+            // Set cursor position after the inserted variable
+            textarea.selectionEnd = cursorPosition + variable.length;
+            textarea.focus();
+        }
+        
+        // Update the components array from the DOM
+        function updateComponentsArray() {
+            components = [];
+            const componentElements = emailCanvas.querySelectorAll('.email-component');
+            
+            componentElements.forEach(element => {
+                components.push({
+                    type: element.dataset.type,
+                    content: element.querySelector('.component-content').innerHTML
+                });
+            });
+        }
+        
+        // Check if canvas is empty and show placeholder
+        function checkEmptyCanvas() {
+            if (emailCanvas.children.length === 0) {
+                const placeholder = document.createElement('div');
+                placeholder.className = 'canvas-placeholder';
+                placeholder.innerHTML = '<p>Drag components from the left panel to build your email template</p>';
+                emailCanvas.appendChild(placeholder);
+            }
+        }
+        
+        // Replace variables in content with their actual values
+        function replaceVariables(content) {
+            let processedContent = content;
+            
+            // Replace all variables in the content
+            for (const [variableKey, variableName] of Object.entries(variableMap)) {
+                const variableValue = variables[variableName] || variableKey;
+                processedContent = processedContent.replace(
+                    new RegExp(variableKey.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), 
+                    variableValue
+                );
+            }
+            
+            return processedContent;
+        }
+        
+        // Show preview modal
+        function showPreview() {
+            updateComponentsArray();
+            
+            if (components.length === 0) {
+                showToast('Add some components to your email first!');
+                return;
+            }
+            
+            let previewHtml = '';
+            
+            components.forEach(component => {
+                previewHtml += replaceVariables(component.content);
+            });
+            
+            previewContent.innerHTML = previewHtml;
+            previewModal.style.display = 'flex';
+        }
+        
+        // Show export modal
+        function showExportModal() {
+            updateComponentsArray();
+            
+            if (components.length === 0) {
+                showToast('Add some components to your email first!');
+                return;
+            }
+            
+            exportModal.style.display = 'flex';
+            exportCodeContainer.style.display = 'none';
+        }
+        
+        // Show send email modal
+        function showSendModal() {
+            updateComponentsArray();
+            
+            if (components.length === 0) {
+                showToast('Add some components to your email first!');
+                return;
+            }
+            
+            // Pre-fill form with saved variables if available
+            if (variables.recipientEmail) {
+                sendToInput.value = variables.recipientEmail;
+            }
+            
+            if (variables.senderName) {
+                sendFromNameInput.value = variables.senderName;
+            }
+            
+            // Clear status message
+            sendStatus.style.display = 'none';
+            sendStatus.innerHTML = '';
+            
+            sendModal.style.display = 'flex';
+        }
+        
+        // Show variables modal
+        function showVariablesModal() {
+            variablesModal.style.display = 'flex';
+        }
+        function showInstModal() {
+            instModal.style.display = 'flex';
+        }
+        // Save variables
+        function saveVariables() {
+            variables = {
+                senderName: senderNameInput.value,
+                senderEmail: senderEmailInput.value,
+                recipientName: recipientNameInput.value,
+                recipientEmail: recipientEmailInput.value,
+                sendDate: sendDateInput.value,
+                companyName: companyNameInput.value
+            };
+            
+            // Save to localStorage
+            localStorage.setItem('emailTemplateVariables', JSON.stringify(variables));
+            
+            // Show success message
+            showToast('Variables saved successfully!');
+            
+            // Close modal after a short delay
+            setTimeout(() => {
+                variablesModal.style.display = 'none';
+            }, 1000);
+        }
+        
+        // Send email using EmailJS
+        function sendEmail() {
+            const toEmail = sendToInput.value.trim();
+            const subject = sendSubjectInput.value.trim();
+            const fromName = sendFromNameInput.value.trim();
+            
+            // Validate inputs
+            if (!toEmail || !subject || !fromName) {
+                showStatus('Please fill in all required fields', 'error');
+                return;
+            }
+            
+            if (!isValidEmail(toEmail)) {
+                showStatus('Please enter a valid recipient email', 'error');
+                return;
+            }
+            
+            // Build email content
+            updateComponentsArray();
+            let emailHtml = '';
+            
+            components.forEach(component => {
+                emailHtml += replaceVariables(component.content);
+            });
+            
+            // Show sending status
+            showStatus('Sending email...', 'loading');
+            
+            // Prepare email parameters
+            const templateParams = {
+                to_email: toEmail,
+                subject: subject,
+                from_name: fromName,
+                message: emailHtml
+            };
+            
+            // Send email using EmailJS
+            // We use the "send" method instead of "sendForm" to send our custom HTML content
+            emailjs.send('service_uz15s3l', 'template_q38w4mi', templateParams)
+                .then(() => {
+                    showStatus('Email sent successfully!', 'success');
+                    
+                    // Clear form after successful send
+                    setTimeout(() => {
+                        sendModal.style.display = 'none';
+                    }, 2000);
+                })
+                .catch((error) => {
+                    console.error('Email sending failed:', error);
+                    showStatus('Failed to send email. Please try again.', 'error');
+                });
+        }
+        
+        // Show status message in send modal
+        function showStatus(message, type) {
+            sendStatus.style.display = 'block';
+            sendStatus.innerHTML = '';
+            
+            const statusElement = document.createElement('div');
+            
+            if (type === 'loading') {
+                statusElement.innerHTML = `<span class="status-loading"></span> ${message}`;
+                statusElement.style.color = '#3498db';
+            } else if (type === 'success') {
+                statusElement.textContent = message;
+                statusElement.style.color = '#2ecc71';
+            } else if (type === 'error') {
+                statusElement.textContent = message;
+                statusElement.style.color = '#e74c3c';
+            }
+            
+            sendStatus.appendChild(statusElement);
+        }
+        
+        // Validate email format
+        function isValidEmail(email) {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            return emailRegex.test(email);
+        }
+        
+        // Export as HTML
+        function exportAsHTML() {
+            updateComponentsArray();
+            
+            let finalHtml = `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="UTF-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    <title>Email Template</title>
+                    <style>
+                        body {
+                            font-family: Arial, sans-serif;
+                            line-height: 1.6;
+                            color: #333;
+                            max-width: 600px;
+                            margin: 0 auto;
+                            padding: 20px;
                         }
-                    };
-                    img.src = event.target.result;
-                };
-                reader.readAsDataURL(file);
-            }
-        });
+                        img {
+                            max-width: 100%;
+                            height: auto;
+                        }
+                        a {
+                            color: #6e8efb;
+                            text-decoration: none;
+                        }
+                    </style>
+                </head>
+                <body>
+                
+            `;
+            
+            components.forEach(component => {
+                finalHtml += replaceVariables(component.content);
+            });
+            
+            finalHtml += `
+                </body>
+                </html>
+            `;
+            
+            exportCode.textContent = finalHtml;
+            exportCodeContainer.style.display = 'block';
+        }
         
-        // Button event listeners
-        startScanBtn.addEventListener('click', startScanner);
-        stopScanBtn.addEventListener('click', stopScanner);
+        // Copy to clipboard
+        function copyToClipboard() {
+            updateComponentsArray();
+            
+            let finalHtml = '';
+            
+            components.forEach(component => {
+                finalHtml += replaceVariables(component.content);
+            });
+            
+            navigator.clipboard.writeText(finalHtml).then(() => {
+                showToast('Copied to clipboard!');
+            }).catch(err => {
+                showToast('Failed to copy to clipboard');
+                console.error('Could not copy text: ', err);
+            });
+        }
         
-        saveContactBtn.addEventListener('click', () => {
-            if (lastScannedData.startsWith('BEGIN:VCARD')) {
-                saveContactFromVCard(lastScannedData);
-            }
-        });
+        // Copy HTML to clipboard
+        function copyHtmlToClipboard() {
+            const htmlContent = exportCode.textContent;
+            
+            navigator.clipboard.writeText(htmlContent).then(() => {
+                showToast('HTML copied to clipboard!');
+                
+                // Visual feedback
+                const originalText = copyHtmlBtn.textContent;
+                copyHtmlBtn.textContent = '✓ Copied!';
+                copyHtmlBtn.style.backgroundColor = '#2ecc71';
+                
+                setTimeout(() => {
+                    copyHtmlBtn.textContent = originalText;
+                    copyHtmlBtn.style.backgroundColor = '#3498db';
+                }, 2000);
+            }).catch(err => {
+                showToast('Failed to copy HTML');
+                console.error('Could not copy HTML: ', err);
+            });
+        }
         
-        openUrlBtn.addEventListener('click', () => {
-            if (lastScannedData) {
-                window.open(lastScannedData, '_blank');
-            }
-        });
+        // Show toast notification
+        function showToast(message) {
+            toast.textContent = message;
+            toast.style.display = 'block';
+            
+            setTimeout(() => {
+                toast.style.display = 'none';
+            }, 3000);
+        }
+        
+        // Initialize the app
+        init();
     </script>
 </body>
 </html>
