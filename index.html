@@ -526,6 +526,7 @@
                     <button id="preview-btn" class="btn btn-secondary">Preview</button>
                     <button id="send-btn" class="btn btn-success">Send Email</button>
                     <button id="export-btn" class="btn btn-primary">Export</button>
+                    <button id="instructions-btn" class="btn btn primary">Instructions</button>
                 </div>
             </div>
             
@@ -535,7 +536,7 @@
                 <div class="canvas-container">
                     <div class="canvas-header">
                         <h2>Your Email Template</h2>
-                        <p>Drag components from the sidebar to build your email</p>
+                        <p>Drag components from the sidebar to build your email. Click "edit" to edit the properties of a component.</p>
                     </div>
                     <div id="email-canvas">
                         <div class="canvas-placeholder">
@@ -547,7 +548,7 @@
                 <!-- Property editor panel -->
                 <div class="property-editor" id="property-editor">
                     <h2>Properties</h2>
-                    <p>Select a component to edit its properties</p>
+                    <p>Click "edit" on a component to edit its properties</p>
                 </div>
             </div>
         </div>
@@ -568,7 +569,27 @@
             </div>
         </div>
     </div>
-    
+    <!-- Instructions Modal --> 
+    <div class="modal" id="inst-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>How To</h2>
+                <button class="close-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <ul>
+                    <li>1. Drag a component from the left into the canvas</li>
+                    <li>2. Edit the component by clicking the blue "Edit" button on that component.</li>
+                    <li>3. Set variables by clicking the "Variables" button in the toolbar.</li>
+                    <li>4. Preview your email by clicking "Preview" in the toolbar</li>
+                    <li>5. Copy the HTML content by clicking "Export" in the toolbar.</li>
+                </ul>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary close-modal">Close</button>
+            </div>
+        </div>
+    </div>
     <!-- Export Modal -->
     <div class="modal" id="export-modal">
         <div class="modal-content">
@@ -720,6 +741,7 @@
         const exportModal = document.getElementById('export-modal');
         const variablesModal = document.getElementById('variables-modal');
         const sendModal = document.getElementById('send-modal');
+        const instModal = document.getElementById('inst-modal');
         const previewContent = document.getElementById('preview-content');
         const exportCode = document.getElementById('export-code');
         const exportCodeContainer = document.getElementById('export-code-container');
@@ -734,6 +756,7 @@
         const saveVariablesBtn = document.getElementById('save-variables');
         const sendEmailBtn = document.getElementById('send-email-btn');
         const copyHtmlBtn = document.getElementById('copy-html-btn');
+        const instBtn = document.getElementById('instructions-btn');
         
         // Variable Inputs
         const senderNameInput = document.getElementById('sender-name');
@@ -826,6 +849,7 @@
             saveVariablesBtn.addEventListener('click', saveVariables);
             sendEmailBtn.addEventListener('click', sendEmail);
             copyHtmlBtn.addEventListener('click', copyHtmlToClipboard);
+            instBtn.addEventListener('click', showInstModal);
             
             // Close modals
             closeModalButtons.forEach(button => {
@@ -834,6 +858,7 @@
                     exportModal.style.display = 'none';
                     variablesModal.style.display = 'none';
                     sendModal.style.display = 'none';
+                    instModal.style.display = 'none';
                 });
             });
             
@@ -847,6 +872,7 @@
                 if (e.target === exportModal) exportModal.style.display = 'none';
                 if (e.target === variablesModal) variablesModal.style.display = 'none';
                 if (e.target === sendModal) sendModal.style.display = 'none';
+                if e.target === instModal) instModal.style.display = 'none';
             });
         }
         
@@ -1320,7 +1346,9 @@
         function showVariablesModal() {
             variablesModal.style.display = 'flex';
         }
-        
+        function showInstModal() {
+            instModal.style.display = 'flex';
+        }
         // Save variables
         function saveVariables() {
             variables = {
