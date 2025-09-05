@@ -257,6 +257,64 @@
         .variable-chip:hover {
             background-color: #d1ebff;
         }
+
+        /* Custom Variables Styles */
+        .custom-variables {
+            margin-top: 30px;
+            border-top: 1px solid #eee;
+            padding-top: 20px;
+        }
+        
+        .custom-variable-item {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+            align-items: center;
+        }
+        
+        .custom-variable-item input {
+            flex: 1;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        
+        .remove-variable {
+            background-color: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            width: 30px;
+            height: 30px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .add-variable-btn {
+            background-color: #2ecc71;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        
+        .custom-variable-chip {
+            background-color: #e2f7e2;
+            color: #27ae60;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .custom-variable-chip:hover {
+            background-color: #c8e6c9;
+        }
         
         /* Modal Styles */
         .modal {
@@ -526,7 +584,7 @@
                     <button id="preview-btn" class="btn btn-secondary">Preview</button>
                     <button id="send-btn" class="btn btn-success">Send Email</button>
                     <button id="export-btn" class="btn btn-primary">Export</button>
-                    <button id="instructions-btn" class="btn btn primary">Instructions</button>
+                    <button id="instructions-btn" class="btn btn-primary">Instructions</button>
                 </div>
             </div>
             
@@ -569,6 +627,7 @@
             </div>
         </div>
     </div>
+    
     <!-- Instructions Modal --> 
     <div class="modal" id="inst-modal">
         <div class="modal-content">
@@ -590,6 +649,7 @@
             </div>
         </div>
     </div>
+    
     <!-- Export Modal -->
     <div class="modal" id="export-modal">
         <div class="modal-content">
@@ -675,6 +735,19 @@
                         <input type="text" id="company-name" placeholder="John Doe and Sons">
                     </div>
                 </div>
+                
+                <!-- Custom Variables Section -->
+                <div class="custom-variables">
+                    <h3>Custom Variables</h3>
+                    <p>Add your own variables with custom names and values</p>
+                    
+                    <div id="custom-variables-list">
+                        <!-- Custom variables will be added here dynamically -->
+                    </div>
+                    
+                    <button id="add-variable" class="add-variable-btn">+ Add Variable</button>
+                </div>
+                
                 <div class="variable-info" style="margin-top: 20px; padding: 15px; background-color: #f8f9fa; border-radius: 5px;">
                     <h3>How to Use Variables</h3>
                     <p>Use these placeholders in your content:</p>
@@ -685,6 +758,7 @@
                         <li><strong>{rEmail}</strong> - Recipient Email</li>
                         <li><strong>{sDate}</strong> - Send Date</li>
                         <li><strong>{cName}</strong> - Company Name</li>
+                        <li><strong>{customVarName}</strong> - Your custom variables (use the exact name you define)</li>
                     </ul>
                 </div>
             </div>
@@ -757,6 +831,7 @@
         const sendEmailBtn = document.getElementById('send-email-btn');
         const copyHtmlBtn = document.getElementById('copy-html-btn');
         const instBtn = document.getElementById('instructions-btn');
+        const addVariableBtn = document.getElementById('add-variable');
         
         // Variable Inputs
         const senderNameInput = document.getElementById('sender-name');
@@ -784,6 +859,7 @@
             sendDate: '',
             companyName: ''
         };
+        let customVariables = {}; // Object to store custom variables
         
         // Variable mapping
         const variableMap = {
@@ -834,6 +910,38 @@
                 sendToInput.value = variables.recipientEmail || '';
                 sendFromNameInput.value = variables.senderName || '';
             }
+            
+            // Load custom variables
+            const savedCustomVariables = localStorage.getItem('emailTemplateCustomVariables');
+            if (savedCustomVariables) {
+                customVariables = JSON.parse(savedCustomVariables);
+                renderCustomVariables();
+            }
+        }
+        
+        // Render custom variables in the UI
+        function renderCustomVariables() {
+            const customVariablesList = document.getElementById('custom-variables-list');
+            customVariablesList.innerHTML = '';
+            
+            for (const [varName, varValue] of Object.entries(customVariables)) {
+                const variableItem = document.createElement('div');
+                variableItem.className = 'custom-variable-item';
+                variableItem.innerHTML = `
+                    <input type="text" class="custom-var-name" value="${varName}" placeholder="Variable Name">
+                    <input type="text" class="custom-var-value" value="${varValue}" placeholder="Variable Value">
+                    <button class="remove-variable">&times;</button>
+                `;
+                customVariablesList.appendChild(variableItem);
+            }
+            
+            // Add event listeners to remove buttons
+            const removeButtons = customVariablesList.querySelectorAll('.remove-variable');
+            removeButtons.forEach(button => {
+                button.addEventListener('click', (e) => {
+                    e.target.closest('.custom-variable-item').remove();
+                });
+            });
         }
         
         // Set up all event listeners
@@ -850,6 +958,7 @@
             sendEmailBtn.addEventListener('click', sendEmail);
             copyHtmlBtn.addEventListener('click', copyHtmlToClipboard);
             instBtn.addEventListener('click', showInstModal);
+            addVariableBtn.addEventListener('click', addCustomVariableField);
             
             // Close modals
             closeModalButtons.forEach(button => {
@@ -873,6 +982,24 @@
                 if (e.target === variablesModal) variablesModal.style.display = 'none';
                 if (e.target === sendModal) sendModal.style.display = 'none';
                 if (e.target === instModal) instModal.style.display = 'none';
+            });
+        }
+        
+        // Add a new custom variable field
+        function addCustomVariableField() {
+            const customVariablesList = document.getElementById('custom-variables-list');
+            const variableItem = document.createElement('div');
+            variableItem.className = 'custom-variable-item';
+            variableItem.innerHTML = `
+                <input type="text" class="custom-var-name" placeholder="Variable Name">
+                <input type="text" class="custom-var-value" placeholder="Variable Value">
+                <button class="remove-variable">&times;</button>
+            `;
+            customVariablesList.appendChild(variableItem);
+            
+            // Add event listener to the remove button
+            variableItem.querySelector('.remove-variable').addEventListener('click', (e) => {
+                e.target.closest('.custom-variable-item').remove();
             });
         }
         
@@ -998,6 +1125,15 @@
                                 <span class="variable-chip" data-var="{rEmail}">Recipient Email</span>
                                 <span class="variable-chip" data-var="{sDate}">Send Date</span>
                                 <span class="variable-chip" data-var="{cName}">Company Name</span>
+                    `;
+                    
+                    // Add custom variables to the palette
+                    for (const [varName, varValue] of Object.entries(customVariables)) {
+                        const displayName = varName.replace('{', '').replace('}', '');
+                        editorHtml += `<span class="variable-chip custom-variable-chip" data-var="${varName}">${displayName}</span>`;
+                    }
+                    
+                    editorHtml += `
                             </div>
                             <button class="btn btn-primary" id="save-text">Save Changes</button>
                         </div>
@@ -1067,6 +1203,15 @@
                                 <span class="variable-chip" data-var="{sName}">Sender Name</span>
                                 <span class="variable-chip" data-var="{sEmail}">Sender Email</span>
                                 <span class="variable-chip" data-var="{cName}">Company Name</span>
+                    `;
+                    
+                    // Add custom variables to the palette
+                    for (const [varName, varValue] of Object.entries(customVariables)) {
+                        const displayName = varName.replace('{', '').replace('}', '');
+                        editorHtml += `<span class="variable-chip custom-variable-chip" data-var="${varName}">${displayName}</span>`;
+                    }
+                    
+                    editorHtml += `
                             </div>
                             <button class="btn btn-primary" id="save-header">Save Changes</button>
                         </div>
@@ -1092,6 +1237,15 @@
                                 <span class="variable-chip" data-var="{sName}">Sender Name</span>
                                 <span class="variable-chip" data-var="{sDate}">Send Date</span>
                                 <span class="variable-chip" data-var="{cName}">Company Name</span>
+                    `;
+                    
+                    // Add custom variables to the palette
+                    for (const [varName, varValue] of Object.entries(customVariables)) {
+                        const displayName = varName.replace('{', '').replace('}', '');
+                        editorHtml += `<span class="variable-chip custom-variable-chip" data-var="${varName}">${displayName}</span>`;
+                    }
+                    
+                    editorHtml += `
                             </div>
                             <button class="btn btn-primary" id="save-hero">Save Changes</button>
                         </div>
@@ -1117,6 +1271,15 @@
                                 <span class="variable-chip" data-var="{sName}">Sender Name</span>
                                 <span class="variable-chip" data-var="{sDate}">Send Date</span>
                                 <span class="variable-chip" data-var="{cName}">Company Name</span>
+                    `;
+                    
+                    // Add custom variables to the palette
+                    for (const [varName, varValue] of Object.entries(customVariables)) {
+                        const displayName = varName.replace('{', '').replace('}', '');
+                        editorHtml += `<span class="variable-chip custom-variable-chip" data-var="${varName}">${displayName}</span>`;
+                    }
+                    
+                    editorHtml += `
                             </div>
                             <button class="btn btn-primary" id="save-footer">Save Changes</button>
                         </div>
@@ -1273,9 +1436,17 @@
         function replaceVariables(content) {
             let processedContent = content;
             
-            // Replace all variables in the content
+            // Replace all predefined variables in the content
             for (const [variableKey, variableName] of Object.entries(variableMap)) {
                 const variableValue = variables[variableName] || variableKey;
+                processedContent = processedContent.replace(
+                    new RegExp(variableKey.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), 
+                    variableValue
+                );
+            }
+            
+            // Replace all custom variables in the content
+            for (const [variableKey, variableValue] of Object.entries(customVariables)) {
                 processedContent = processedContent.replace(
                     new RegExp(variableKey.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), 
                     variableValue
@@ -1346,9 +1517,11 @@
         function showVariablesModal() {
             variablesModal.style.display = 'flex';
         }
+        
         function showInstModal() {
             instModal.style.display = 'flex';
         }
+        
         // Save variables
         function saveVariables() {
             variables = {
@@ -1360,8 +1533,27 @@
                 companyName: companyNameInput.value
             };
             
+            // Save custom variables
+            const customVarItems = document.querySelectorAll('.custom-variable-item');
+            customVariables = {};
+            
+            customVarItems.forEach(item => {
+                const nameInput = item.querySelector('.custom-var-name');
+                const valueInput = item.querySelector('.custom-var-value');
+                
+                if (nameInput.value.trim() !== '') {
+                    // Add curly braces if not already present
+                    let varName = nameInput.value.trim();
+                    if (!varName.startsWith('{')) varName = '{' + varName;
+                    if (!varName.endsWith('}')) varName = varName + '}';
+                    
+                    customVariables[varName] = valueInput.value;
+                }
+            });
+            
             // Save to localStorage
             localStorage.setItem('emailTemplateVariables', JSON.stringify(variables));
+            localStorage.setItem('emailTemplateCustomVariables', JSON.stringify(customVariables));
             
             // Show success message
             showToast('Variables saved successfully!');
